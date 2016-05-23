@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"log"
 	//"encoding/json"
-    //"net"
-    //"net/rpc"
-    //"time"
+	//"net"
+	//"net/rpc"
+	//"time"
 )
 
 const SERVERADDRESS = "127.0.0.1:1234"
@@ -43,14 +43,14 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 	var value string = value_list[0]
     PrintLog(MODE, "Inserting " + key + ":" + value)
 
-    _, ok := DataBase[key]
-    if(ok){
-    	PrintLog(MODE, "key " + key + " already exists")
+	_, ok := DataBase[key]
+	if(ok){
+		PrintLog(MODE, "key " + key + " already exists")
 		//fmt.Fprintln(w, string(response))
-    } else {
-    	DataBase[key] = value
-    	PrintLog(MODE, "Inserted " + key + ":" + value)
-    }
+	} else {
+		DataBase[key] = value
+		PrintLog(MODE, "Inserted " + key + ":" + value)
+	}
 }
 
 func HandleDelete(w http.ResponseWriter, request *http.Request) {
