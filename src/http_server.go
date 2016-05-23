@@ -77,8 +77,8 @@ func main() {
 	http.HandleFunc("/kv/delete", HandleDelete)
 	http.HandleFunc("/kv/get", HandleGet)
 	http.HandleFunc("/kv/update", HandleUpdate)
-	
-    err := http.ListenAndServe(SERVERADDRESS, nil)
+
+	err := http.ListenAndServe(SERVERADDRESS, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err.Error())
 	}
