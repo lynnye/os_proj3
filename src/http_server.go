@@ -41,7 +41,7 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 
 	var key string = key_list[0]
 	var value string = value_list[0]
-    PrintLog(MODE, "Inserting " + key + ":" + value)
+	PrintLog(MODE, "Inserting " + key + ":" + value)
 
 	_, ok := DataBase[key]
 	if(ok){
@@ -77,9 +77,9 @@ func main() {
 	http.HandleFunc("/kv/delete", HandleDelete)
 	http.HandleFunc("/kv/get", HandleGet)
 	http.HandleFunc("/kv/update", HandleUpdate)
+	
     err := http.ListenAndServe(SERVERADDRESS, nil)
-    if err != nil {
-        log.Fatal("ListenAndServe: ", err.Error())
-    }
-
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err.Error())
+	}
 }
