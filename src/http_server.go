@@ -7,6 +7,7 @@ import (
 	//"net"
 	//"net/rpc"
 	//"time"
+	"strconv"
 )
 
 const SERVERADDRESS = "127.0.0.1:1234"
@@ -29,6 +30,10 @@ func UnsuccessResponse(error_message string) string {
 	//})	
 }
 
+func Insert(key, value string) {
+	DataBase[key] = value
+}
+
 func HandleInsert(w http.ResponseWriter, request *http.Request) {
 	key_list, key_ok := request.Form["key"]
 	value_list, value_ok := request.Form["value"]
@@ -47,29 +52,61 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 	if(ok){
 		PrintLog(MODE, "key " + key + " already exists")
 		//fmt.Fprintln(w, string(response))
+		// make response
+		return
 	} else {
-		DataBase[key] = value
+		Insert(key, value)
 		PrintLog(MODE, "Inserted " + key + ":" + value)
+		// make response
 	}
 }
 
+func Delete(key string) {
+
+}
+
 func HandleDelete(w http.ResponseWriter, request *http.Request) {
-	
+	key:=""
+	Delete(key)
+}
+
+func Get(key string) string {
+
+	return ""
 }
 
 func HandleGet(w http.ResponseWriter, request *http.Request) {
-	
+	key:=""
+	Get(key)
+	// make response
+}
+
+func Update(key string, value string) {
+
 }
 
 func HandleUpdate(w http.ResponseWriter, request *http.Request) {
-	
+	key, value := "", ""
+	Update(key, value)	
 }
 
 func HandleDefault(w http.ResponseWriter, request *http.Request) {
 	fmt.Println("In HandleDefault")
-    fmt.Fprintf(w, "Hello,"+request.URL.Path[1:])
+	fmt.Fprintf(w, "Hello,"+request.URL.Path[1:])
 }
 
+func HandleCountKey(w http.ResponseWriter, request *http.Request) {
+	PrintLog(MODE, "inquiring count key : " + strconv.Itoa(len(DataBase)))
+
+}
+
+func HandleDump(w http.ResponseWriter, request *http.Request) {
+	
+}
+
+func HandleShutdown(w http.ResponseWriter, request *http.Request) {
+	
+}
 
 func main() {
 	http.HandleFunc("/", HandleDefault)
@@ -77,6 +114,9 @@ func main() {
 	http.HandleFunc("/kv/delete", HandleDelete)
 	http.HandleFunc("/kv/get", HandleGet)
 	http.HandleFunc("/kv/update", HandleUpdate)
+	http.HandleFunc("/kvman/countkey", HandleCountKey)
+	http.HandleFunc("/kvman/dump", HandleDump)
+	http.HandleFunc("/kvman/shutdown", HandleShutdown)
 
 	err := http.ListenAndServe(SERVERADDRESS, nil)
 	if err != nil {
