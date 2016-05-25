@@ -48,7 +48,6 @@ func Insert(key, value string) bool {
 
 func HandleInsert(w http.ResponseWriter, request *http.Request) {
 	if(request.ParseForm() != nil) {
-		//w.WriteHeader(400)
 		fmt.Fprintln(w, UnsuccessResponse("In HandleInsert, fail to parse URL"))
 		PrintLog(MODE, "In HandleInsert, fail to parse URL")
 		return
