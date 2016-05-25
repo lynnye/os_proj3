@@ -3,15 +3,18 @@ import (
 	"fmt"
 	"net/http"
 	"log"
-	//"encoding/json"
-	//"net"
+	"encoding/json"
 	//"net/rpc"
-	//"time"
 	"strconv"
+	"io/ioutil"
+	"strings"
+	"sync"
 )
 
-const SERVERADDRESS = "127.0.0.1:1234"
-var DataBase map[string]string
+var DataBase = struct{
+    sync.RWMutex
+    data map[string]string
+}{data: make(map[string]string)}
 
 const MODE = "debug"
 
@@ -22,72 +25,176 @@ func PrintLog(condition string, log_content string) {
 }
 
 func UnsuccessResponse(error_message string) string {
-	PrintLog(MODE, error_message)
-
-	return ""
-	//json_encode, json_ok = json.Marshal(map[string]string{
-	//	"success":strconv.FormatBool(success),
-	//})	
+	json_encode, _ := json.Marshal(map[string]string{
+		"success":"false","error":error_message,
+	})	
+	return string(json_encode)
 }
 
-func Insert(key, value string) {
-	DataBase[key] = value
+func Insert(key, value string) bool {
+	DataBase.RLock()
+	_, ok := DataBase.data[key]
+	DataBase.RUnlock()
+	if(ok) {
+		PrintLog(MODE, "In Insert, key " + key + " already exists")
+		return false
+	}
+	DataBase.Lock()
+	DataBase.data[key] = value
+	DataBase.Unlock()
+	PrintLog(MODE, "Inserted " + key + ":" + value)	
+	return true
 }
 
 func HandleInsert(w http.ResponseWriter, request *http.Request) {
+	if(request.ParseForm() != nil) {
+		//w.WriteHeader(400)
+		fmt.Fprintln(w, UnsuccessResponse("In HandleInsert, fail to parse URL"))
+		PrintLog(MODE, "In HandleInsert, fail to parse URL")
+		return
+	}
 	key_list, key_ok := request.Form["key"]
 	value_list, value_ok := request.Form["value"]
-	if(!key_ok || !value_ok) {
-		UnsuccessResponse("in insert, key or value input not correct")
-		fmt.Println(len(key_list))
-		fmt.Println(len(value_list))
+	if(!key_ok || !value_ok || len(key_list)!=1 || len(value_list)!=1) {
+		fmt.Fprintln(w, UnsuccessResponse("In insert, key or value input not correct"))
 		return
 	}
 
 	var key string = key_list[0]
 	var value string = value_list[0]
-	PrintLog(MODE, "Inserting " + key + ":" + value)
 
-	_, ok := DataBase[key]
-	if(ok){
-		PrintLog(MODE, "key " + key + " already exists")
-		//fmt.Fprintln(w, string(response))
-		// make response
+	succ_insert := Insert(key, value)
+	if(!succ_insert){
+		fmt.Fprintln(w, UnsuccessResponse("In insert, key already exists"))
 		return
-	} else {
-		Insert(key, value)
-		PrintLog(MODE, "Inserted " + key + ":" + value)
-		// make response
-	}
+	} 
+	
+	json_encode, _ := json.Marshal(map[string]string{
+		"success":"true", "error":"", 
+	})		
+	fmt.Fprintln(w, string(json_encode))
 }
 
-func Delete(key string) {
-
+func Delete(key string) (bool, string) {
+	DataBase.RLock()
+	value, ok := DataBase.data[key]
+	DataBase.RUnlock()
+	if(!ok) {
+		PrintLog(MODE, "In Delete, key " + key + " not exists")
+		return false, ""
+	}
+	DataBase.Lock()
+	delete(DataBase.data, key)
+	DataBase.Unlock()
+	PrintLog(MODE, "Deleted " + key + ":" + value)
+	return true, value
 }
 
 func HandleDelete(w http.ResponseWriter, request *http.Request) {
-	key:=""
-	Delete(key)
+	if(request.ParseForm() != nil) {
+		fmt.Fprintln(w, UnsuccessResponse("In HandleDelete, fail to parse URL"))
+		PrintLog(MODE, "In HandleDelete, fail to parse URL")
+		return
+	}
+	key_list, key_ok := request.Form["key"]
+	if(!key_ok || len(key_list)!=1) {
+		fmt.Fprintln(w, UnsuccessResponse("In delete, key input not correct"))
+		return
+	}
+
+	var key string = key_list[0]
+
+	succ_delete, delete_value := Delete(key)
+	if(!succ_delete){
+		fmt.Fprintln(w, UnsuccessResponse("In delete, key not exists"))
+		return
+	} 
+	
+	json_encode, _ := json.Marshal(map[string]string{
+		"success":"true", "value":delete_value, "error":"", 
+	})		
+	fmt.Fprintln(w, string(json_encode))
 }
 
-func Get(key string) string {
-
-	return ""
+func Get(key string) (bool, string) {
+	DataBase.RLock()
+	value, ok := DataBase.data[key]
+	DataBase.RUnlock()
+	if(!ok) {
+		PrintLog(MODE, "In Get, key " + key + " not exists")
+		return false, ""
+	}
+	PrintLog(MODE, "Got " + key + ":" + value)
+	return true, value
 }
 
 func HandleGet(w http.ResponseWriter, request *http.Request) {
-	key:=""
-	Get(key)
-	// make response
+	if(request.ParseForm() != nil) {
+		fmt.Fprintln(w, UnsuccessResponse("In HandleGet, fail to parse URL"))
+		PrintLog(MODE, "In HandleGet, fail to parse URL")
+		return
+	}
+	key_list, key_ok := request.Form["key"]
+	if(!key_ok || len(key_list)!=1) {
+		fmt.Fprintln(w, UnsuccessResponse("In get, key input not correct"))
+		return
+	}
+
+	var key string = key_list[0]
+
+	succ_get, get_value := Get(key)
+	if(!succ_get){
+		fmt.Fprintln(w, UnsuccessResponse("In get, key not exists"))
+		return
+	} 
+	
+	json_encode, _ := json.Marshal(map[string]string{
+		"success":"true", "value":get_value, "error":"", 
+	})		
+	fmt.Fprintln(w, string(json_encode))
 }
 
-func Update(key string, value string) {
-
+func Update(key string, value string) (bool) {
+	DataBase.RLock()
+	_, ok := DataBase.data[key]
+	DataBase.RUnlock()
+	if(!ok) {
+		PrintLog(MODE, "In Update, key " + key + " not exists")
+		return false
+	}
+	DataBase.Lock()
+	DataBase.data[key] = value
+	DataBase.Unlock()
+	PrintLog(MODE, "Updated " + key + ":" + value)	
+	return true	
 }
 
 func HandleUpdate(w http.ResponseWriter, request *http.Request) {
-	key, value := "", ""
-	Update(key, value)	
+	if(request.ParseForm() != nil) {
+		fmt.Fprintln(w, UnsuccessResponse("In HandleUpdate, fail to parse URL"))
+		PrintLog(MODE, "In HandleUpdate, fail to parse URL")
+		return
+	}
+	key_list, key_ok := request.Form["key"]
+	value_list, value_ok := request.Form["value"]
+	if(!key_ok || !value_ok || len(key_list)!=1 || len(value_list)!=1) {
+		fmt.Fprintln(w, UnsuccessResponse("In update, key or value input not correct"))
+		return
+	}
+
+	var key string = key_list[0]
+	var value string = value_list[0]
+
+	succ_update := Update(key, value)
+	if(!succ_update){
+		fmt.Fprintln(w, UnsuccessResponse("In update, key not exists"))
+		return
+	} 
+	
+	json_encode, _ := json.Marshal(map[string]string{
+		"success":"true", "error":"", 
+	})		
+	fmt.Fprintln(w, string(json_encode))
 }
 
 func HandleDefault(w http.ResponseWriter, request *http.Request) {
@@ -96,16 +203,43 @@ func HandleDefault(w http.ResponseWriter, request *http.Request) {
 }
 
 func HandleCountKey(w http.ResponseWriter, request *http.Request) {
-	PrintLog(MODE, "inquiring count key : " + strconv.Itoa(len(DataBase)))
-
+	total_key := strconv.Itoa(len(DataBase.data))
+	PrintLog(MODE, "inquiring count key : " + total_key)
+	ret, _ := json.Marshal(map[string]string{
+		"result":total_key,
+	})
+	fmt.Fprintln(w, string(ret))
 }
 
 func HandleDump(w http.ResponseWriter, request *http.Request) {
-	
+	total_key := strconv.Itoa(len(DataBase.data))
+	PrintLog(MODE, "dumping database : " + total_key)
+	ret, _ := json.Marshal(DataBase.data)
+	fmt.Fprintln(w, string(ret))
 }
 
 func HandleShutdown(w http.ResponseWriter, request *http.Request) {
 	
+}
+
+func DecodeConfig() string {
+	config_file, err := ioutil.ReadFile("../conf/settings.conf")
+	if err != nil{
+		fmt.Println("Load config file error")
+		log.Fatal("Load config gile: ", err.Error())
+	}
+	type server_config struct{
+		Primary, Backup, Port string
+	}
+	dec := json.NewDecoder(strings.NewReader(string(config_file)))
+	var config server_config;
+	err = dec.Decode(&config)
+	if err != nil {
+		fmt.Println("Parse config file error")
+		log.Fatal("Parse config file(Json): ", err.Error())
+	}
+	return config.Primary + ":" + config.Port
+
 }
 
 func main() {
@@ -117,8 +251,9 @@ func main() {
 	http.HandleFunc("/kvman/countkey", HandleCountKey)
 	http.HandleFunc("/kvman/dump", HandleDump)
 	http.HandleFunc("/kvman/shutdown", HandleShutdown)
-
-	err := http.ListenAndServe(SERVERADDRESS, nil)
+	server_address := DecodeConfig()
+	PrintLog(MODE, "server address: " + server_address)
+	err := http.ListenAndServe(server_address, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err.Error())
 	}
