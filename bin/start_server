@@ -1,0 +1,3 @@
+import os
+
+os.system("go run ../src/http_server.go")

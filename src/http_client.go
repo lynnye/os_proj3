@@ -9,6 +9,10 @@ import (
 
 const serverAddress = "http://127.0.0.1:1234"
 
+type BackupResponse struct{
+	Success string
+}
+
 func Insert(key,value string) {
 	response, err := http.PostForm(serverAddress + "/kv/insert", 
     	url.Values{"key": {key}, "value": {value}})
@@ -49,8 +53,7 @@ func Delete(key string) {
 }
 
 func Get(key string) {
-	response, err := http.PostForm(serverAddress + "/kv/get", 
-    	url.Values{"key": {key}})
+	response, err := http.Get(serverAddress + "/kv/get?key=" + key)
   	if err != nil {
     	fmt.Println("Post Get: ", err.Error())
     	return
@@ -89,7 +92,11 @@ func Update(key,value string) {
 
 
 func CountKey() {
-	response, _ := http.Get(serverAddress + "/kvman/countkey")
+	response, err := http.Get(serverAddress + "/kvman/countkey")
+	if err != nil {
+    	fmt.Println("Post Update: ", err.Error())
+    	return
+  	} 
 	defer response.Body.Close()
   	dec := json.NewDecoder(response.Body)
   	type CountKey struct{
@@ -101,7 +108,11 @@ func CountKey() {
 }
 
 func Dump() {
-	response, _ := http.Get(serverAddress + "/kvman/dump")
+	response, err := http.Get(serverAddress + "/kvman/dump")
+	if err != nil {
+    	fmt.Println("Post Update: ", err.Error())
+    	return
+  	} 
 	defer response.Body.Close()
   	dec := json.NewDecoder(response.Body)
 	dumped_data := make(map[string]string)
