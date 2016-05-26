@@ -75,6 +75,7 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 		"success":"true", "error":"", 
 	})		
 	fmt.Fprintln(w, string(json_encode))
+	//request.Body.Close()	
 }
 
 func Delete(key string) (bool, string) {

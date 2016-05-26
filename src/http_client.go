@@ -5,6 +5,7 @@ import (
 	"fmt"
 	//"io/ioutil"
 	"encoding/json"
+	"strconv"
 )
 
 const serverAddress = "http://127.0.0.1:1234"
@@ -16,6 +17,25 @@ type BackupResponse struct{
 func Insert(key,value string) {
 	response, err := http.PostForm(serverAddress + "/kv/insert", 
     	url.Values{"key": {key}, "value": {value}})
+  	if err != nil {
+    	fmt.Println("Post Insert: ", err.Error())
+    	return
+  	} 
+ 	defer response.Body.Close()
+  	
+  	dec := json.NewDecoder(response.Body)
+  	type Insert struct{
+		Success string
+		Error string
+	}
+	var ret Insert
+	dec.Decode(&ret)
+	fmt.Println(ret.Success + ":" + ret.Error)
+}
+
+func InsertFalse(key,value string) {
+	response, err := http.PostForm(serverAddress + "/kv/insert", 
+    	url.Values{"keyfalse": {key}, "value": {value}})
   	if err != nil {
     	fmt.Println("Post Insert: ", err.Error())
     	return
@@ -123,10 +143,22 @@ func Dump() {
 	} 
 }
 
+func Shutdown() {
+	response, err := http.Get(serverAddress + "/kvman/shutdown")
+	if err != nil {
+    	fmt.Println("Post Shutdown: ", err.Error())
+    	return
+  	} 
+	response.Body.Close()
+}
+
+
 func main() {
 	Insert("1", "100")
 	Insert("2", "200")
 	Insert("3", "300")
+	InsertFalse("aaaaaaaaaaaaaaaaa", "kkkkkkkkkkkkkkkk")
+	Insert("298187&* ////\"\"=", "298187&* ////\"\"==========")
 	CountKey()
 	Insert("1", "100")
 	CountKey()
@@ -136,8 +168,15 @@ func main() {
 	CountKey()
 	Get("1")
 	Get("3")
+	Get("298187&* ////\"\"=")
 	Update("1", "100000000")
 	Get("1")
 	CountKey()
 	Dump()
+	for i := 1; i <=1000000; i ++ {
+		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
+	}
+
+	Shutdown()
+
 }

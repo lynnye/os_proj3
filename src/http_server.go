@@ -68,7 +68,7 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 
 	DataBase.Lock()
 	{
-		_, err := http.PostForm("http://" + backup_address + "/kv/insert", 
+		response, err := http.PostForm("http://" + backup_address + "/kv/insert", 
     		url.Values{"key": {key}, "value": {value}})
   		if err != nil {
     		PrintLog(MODE, "Post Insert to Backup: " + err.Error())
@@ -76,6 +76,7 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
     		DataBase.Unlock()
     		return
   		}	 
+  		response.Body.Close()
 
 		succ_insert := Insert(key, value)
 		if(!succ_insert){
@@ -87,7 +88,8 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 		json_encode, _ := json.Marshal(map[string]string{
 			"success":"true", 
 		})		
-		fmt.Fprintln(w, string(json_encode))		
+		fmt.Fprintln(w, string(json_encode))
+		//request.Body.Close()	
 	}
 	DataBase.Unlock()
 }
@@ -123,8 +125,9 @@ func HandleDelete(w http.ResponseWriter, request *http.Request) {
 
 	DataBase.Lock()
 	{
-		_, err := http.PostForm("http://" + backup_address + "/kv/delete", 
+		response, err := http.PostForm("http://" + backup_address + "/kv/delete", 
     		url.Values{"key": {key}})
+		response.Body.Close()
   		if err != nil {
     		PrintLog(MODE, "Post Delete to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In delete, backup fails"))
@@ -175,7 +178,8 @@ func HandleGet(w http.ResponseWriter, request *http.Request) {
 
 	DataBase.RLock()
 	{
-		_, err := http.Get("http://" + backup_address + "/kv/get?key=" + key)
+		response, err := http.Get("http://" + backup_address + "/kv/get?key=" + key)
+		response.Body.Close()
   		if err != nil {
     		PrintLog(MODE, "Post Get to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In get, backup fails"))
@@ -231,8 +235,9 @@ func HandleUpdate(w http.ResponseWriter, request *http.Request) {
 
 	DataBase.Lock()
 	{
-		_, err := http.PostForm("http://" + backup_address + "/kv/update", 
+		response, err := http.PostForm("http://" + backup_address + "/kv/update", 
     		url.Values{"key": {key}, "value": {value}})
+		response.Body.Close()
   		if err != nil {
     		PrintLog(MODE, "Post Update to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In update, backup fails"))
