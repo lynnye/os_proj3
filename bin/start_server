@@ -1,3 +1,13 @@
 import os
+import sys
 
-os.system("go run ../src/http_server.go")
+if __name__ == "__main__":
+	if len(sys.argv) == 2 and sys.argv[1] == '-p' :
+		os.system("go run http_server.go")
+		quit()
+	if len(sys.argv) == 2 and sys.argv[1] == '-b' :
+		os.system("go run http_backup.go")
+		quit()
+
+	print "Please specify the argument: -p or -b?"
+

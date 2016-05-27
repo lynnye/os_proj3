@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"os"
+	"net/url"
 )
 
 var DataBase = struct{
@@ -19,11 +20,11 @@ var DataBase = struct{
 
 const MODE = "debug"
 
-var server_address, backup_address string
+var server_address, backup_address string 
 
 func PrintLog(condition string, log_content string) {
 	if(condition == "debug") {
-		fmt.Println("In backup server: " + log_content)
+		fmt.Println("In primary server: " + log_content)
 	}
 }
 
@@ -35,16 +36,16 @@ func UnsuccessResponse(error_message string) string {
 }
 
 func Insert(key, value string) bool {
-	DataBase.RLock()
+	//DataBase.RLock()
 	_, ok := DataBase.data[key]
-	DataBase.RUnlock()
+	//DataBase.RUnlock()
 	if(ok) {
 		PrintLog(MODE, "In Insert, key " + key + " already exists")
 		return false
 	}
-	DataBase.Lock()
+	//DataBase.Lock()
 	DataBase.data[key] = value
-	DataBase.Unlock()
+	//DataBase.Unlock()
 	PrintLog(MODE, "Inserted " + key + ":" + value)	
 	return true
 }
@@ -65,30 +66,45 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 	var key string = key_list[0]
 	var value string = value_list[0]
 
-	succ_insert := Insert(key, value)
-	if(!succ_insert){
-		fmt.Fprintln(w, UnsuccessResponse("In insert, key already exists"))
-		return
-	} 
+	DataBase.Lock()
+	{
+		response, err := http.PostForm("http://" + backup_address + "/kv/insert", 
+    		url.Values{"key": {key}, "value": {value}})
+  		if err != nil {
+    		PrintLog(MODE, "Post Insert to Backup: " + err.Error())
+    		fmt.Fprintln(w, UnsuccessResponse("In insert, backup fails"))
+    		DataBase.Unlock()
+    		return
+  		}	 
+  		response.Body.Close()
+
+		succ_insert := Insert(key, value)
+		if(!succ_insert){
+			fmt.Fprintln(w, UnsuccessResponse("In insert, key already exists"))
+			DataBase.Unlock()
+			return
+		}
 	
-	json_encode, _ := json.Marshal(map[string]string{
-		"success":"true", "error":"", 
-	})		
-	fmt.Fprintln(w, string(json_encode))
-	//request.Body.Close()	
+		json_encode, _ := json.Marshal(map[string]string{
+			"success":"true", 
+		})		
+		fmt.Fprintln(w, string(json_encode))
+		//request.Body.Close()	
+	}
+	DataBase.Unlock()
 }
 
 func Delete(key string) (bool, string) {
-	DataBase.RLock()
+	//DataBase.RLock()
 	value, ok := DataBase.data[key]
-	DataBase.RUnlock()
+	//DataBase.RUnlock()
 	if(!ok) {
 		PrintLog(MODE, "In Delete, key " + key + " not exists")
 		return false, ""
 	}
-	DataBase.Lock()
+	//DataBase.Lock()
 	delete(DataBase.data, key)
-	DataBase.Unlock()
+	//DataBase.Unlock()
 	PrintLog(MODE, "Deleted " + key + ":" + value)
 	return true, value
 }
@@ -107,22 +123,37 @@ func HandleDelete(w http.ResponseWriter, request *http.Request) {
 
 	var key string = key_list[0]
 
-	succ_delete, delete_value := Delete(key)
-	if(!succ_delete){
-		fmt.Fprintln(w, UnsuccessResponse("In delete, key not exists"))
-		return
-	} 
+	DataBase.Lock()
+	{
+		response, err := http.PostForm("http://" + backup_address + "/kv/delete", 
+    		url.Values{"key": {key}})
+		response.Body.Close()
+  		if err != nil {
+    		PrintLog(MODE, "Post Delete to Backup: " + err.Error())
+    		fmt.Fprintln(w, UnsuccessResponse("In delete, backup fails"))
+    		DataBase.Unlock()
+    		return
+  		}	 
+
+		succ_delete, delete_value := Delete(key)
+		if(!succ_delete){
+			fmt.Fprintln(w, UnsuccessResponse("In delete, key not exists"))
+			DataBase.Unlock()
+			return
+		}
 	
-	json_encode, _ := json.Marshal(map[string]string{
-		"success":"true", "value":delete_value, "error":"", 
-	})		
-	fmt.Fprintln(w, string(json_encode))
+		json_encode, _ := json.Marshal(map[string]string{
+			"success":"true", "value":delete_value,
+		})		
+		fmt.Fprintln(w, string(json_encode))		
+	}
+	DataBase.Unlock()
 }
 
 func Get(key string) (bool, string) {
-	DataBase.RLock()
+	//DataBase.RLock()
 	value, ok := DataBase.data[key]
-	DataBase.RUnlock()
+	//DataBase.RUnlock()
 	if(!ok) {
 		PrintLog(MODE, "In Get, key " + key + " not exists")
 		return false, ""
@@ -145,29 +176,43 @@ func HandleGet(w http.ResponseWriter, request *http.Request) {
 
 	var key string = key_list[0]
 
-	succ_get, get_value := Get(key)
-	if(!succ_get){
-		fmt.Fprintln(w, UnsuccessResponse("In get, key not exists"))
-		return
-	} 
+	DataBase.RLock()
+	{
+		response, err := http.Get("http://" + backup_address + "/kv/get?key=" + key)
+		response.Body.Close()
+  		if err != nil {
+    		PrintLog(MODE, "Post Get to Backup: " + err.Error())
+    		fmt.Fprintln(w, UnsuccessResponse("In get, backup fails"))
+    		DataBase.RUnlock()
+    		return
+  		}	 
+
+		succ_get, get_value := Get(key)
+		if(!succ_get){
+			fmt.Fprintln(w, UnsuccessResponse("In get, key not exists"))
+			DataBase.RUnlock()
+			return
+		}
 	
-	json_encode, _ := json.Marshal(map[string]string{
-		"success":"true", "value":get_value, "error":"", 
-	})		
-	fmt.Fprintln(w, string(json_encode))
+		json_encode, _ := json.Marshal(map[string]string{
+			"success":"true", "value":get_value,
+		})		
+		fmt.Fprintln(w, string(json_encode))		
+	}
+	DataBase.RUnlock()
 }
 
 func Update(key string, value string) (bool) {
-	DataBase.RLock()
+	//DataBase.RLock()
 	_, ok := DataBase.data[key]
-	DataBase.RUnlock()
+	//DataBase.RUnlock()
 	if(!ok) {
 		PrintLog(MODE, "In Update, key " + key + " not exists")
 		return false
 	}
-	DataBase.Lock()
+	//DataBase.Lock()
 	DataBase.data[key] = value
-	DataBase.Unlock()
+	//DataBase.Unlock()
 	PrintLog(MODE, "Updated " + key + ":" + value)	
 	return true	
 }
@@ -188,16 +233,31 @@ func HandleUpdate(w http.ResponseWriter, request *http.Request) {
 	var key string = key_list[0]
 	var value string = value_list[0]
 
-	succ_update := Update(key, value)
-	if(!succ_update){
-		fmt.Fprintln(w, UnsuccessResponse("In update, key not exists"))
-		return
-	} 
+	DataBase.Lock()
+	{
+		response, err := http.PostForm("http://" + backup_address + "/kv/update", 
+    		url.Values{"key": {key}, "value": {value}})
+		response.Body.Close()
+  		if err != nil {
+    		PrintLog(MODE, "Post Update to Backup: " + err.Error())
+    		fmt.Fprintln(w, UnsuccessResponse("In update, backup fails"))
+    		DataBase.Unlock()
+    		return
+  		}	 
+
+		succ_update := Update(key, value)
+		if(!succ_update){
+			fmt.Fprintln(w, UnsuccessResponse("In update, key not exists"))
+			DataBase.Unlock()
+			return
+		}
 	
-	json_encode, _ := json.Marshal(map[string]string{
-		"success":"true", "error":"", 
-	})		
-	fmt.Fprintln(w, string(json_encode))
+		json_encode, _ := json.Marshal(map[string]string{
+			"success":"true", 
+		})		
+		fmt.Fprintln(w, string(json_encode))		
+	}
+	DataBase.Unlock()
 }
 
 func HandleDefault(w http.ResponseWriter, request *http.Request) {
@@ -223,6 +283,7 @@ func HandleDump(w http.ResponseWriter, request *http.Request) {
 
 func HandleShutdown(w http.ResponseWriter, request *http.Request) {
 	DataBase.Lock()
+	PrintLog(MODE, "In shutdown, primary server shutdown")
 	os.Exit(0)
 }
 
@@ -246,7 +307,7 @@ func DecodeConfig() (string, string) {
 }
 
 func InitialDump() {
-	response, err := http.Get("http://" + server_address + "/kvman/dump")
+	response, err := http.Get("http://" + backup_address + "/kvman/dump")
 	if err != nil {
     	fmt.Println("Initial dump: ", err.Error())
     	return
@@ -275,8 +336,9 @@ func main() {
 	PrintLog(MODE, "server address: " + server_address)
 	PrintLog(MODE, "backup address: " + backup_address)
 	InitialDump()
-	err := http.ListenAndServe(backup_address, nil)
+	err := http.ListenAndServe(server_address, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err.Error())
 	}
+	os.Exit(0)
 }

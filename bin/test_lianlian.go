@@ -6,6 +6,9 @@ import (
 	//"io/ioutil"
 	"encoding/json"
 	"strconv"
+	"time"
+	"os/exec"
+	"os"
 )
 
 const serverAddress = "http://127.0.0.1:1234"
@@ -152,8 +155,26 @@ func Shutdown() {
 	response.Body.Close()
 }
 
+func StartServer(argument string) {
+	cmd := exec.Command("python", "start_server", argument)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	fmt.Println(cmd.Start())
+}
+
+func StopServer(argument string) {
+	cmd := exec.Command("python", "stop_server", argument)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	fmt.Println(cmd.Start())
+}
+
 
 func main() {
+	StartServer("-b")
+	StartServer("-p")
+	time.Sleep(time.Second*4)
+
 	Insert("1", "100")
 	Insert("2", "200")
 	Insert("3", "300")
@@ -173,10 +194,30 @@ func main() {
 	Get("1")
 	CountKey()
 	Dump()
+	
+	for i := 1; i <= 20; i ++ {
+		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
+		time.Sleep(time.Second)
+	}
+
+	StopServer("-p")
+	time.Sleep(time.Second*3)
+	Insert("adfegaegae", "3dg34g3h")
+	StartServer("-p")
+	time.Sleep(time.Second*3)
+	Insert("adfegaegae", "*****************")
+	StopServer("-b")
+	time.Sleep(time.Second*3)
+	Insert("adsewgeageaegaewgageagha", "*/%&&/%/%/%$$&**")
+	Dump()
+	StopServer("-p")
+	time.Sleep(time.Second*3)
+
+	/*
 	for i := 1; i <=1000000; i ++ {
 		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
 	}
 
-	Shutdown()
+	Shutdown()*/
 
 }
