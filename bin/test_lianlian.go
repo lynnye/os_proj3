@@ -11,11 +11,20 @@ import (
 	"os"
 	"log"
 	"strings"
+	"io"
 )
 
 var server_address = "http://127.0.0.1:1234"
 var backup_address = "http://127.0.0.2:1234"
 var stop_chan = make(chan int)
+
+const MODE = "debug"
+
+func PrintLog(condition string, log_content string) {
+	if(condition == "debug") {
+		fmt.Println("In primary server: " + log_content)
+	}
+}
 
 func DecodeConfig() (string, string) {
 	config_file, err := ioutil.ReadFile("../conf/settings.conf")
@@ -47,7 +56,6 @@ func Insert(key,value string) {
     	fmt.Println("Post Insert: ", err.Error())
     	return
   	} 
- 	defer response.Body.Close()
   	
   	dec := json.NewDecoder(response.Body)
   	type Insert struct{
@@ -57,6 +65,9 @@ func Insert(key,value string) {
 	var ret Insert
 	dec.Decode(&ret)
 	fmt.Println(ret.Success + ":" + ret.Error)
+
+	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
 }
 
 func InsertFalse(key,value string) {
@@ -66,7 +77,6 @@ func InsertFalse(key,value string) {
     	fmt.Println("Post Insert: ", err.Error())
     	return
   	} 
- 	defer response.Body.Close()
   	
   	dec := json.NewDecoder(response.Body)
   	type Insert struct{
@@ -76,6 +86,9 @@ func InsertFalse(key,value string) {
 	var ret Insert
 	dec.Decode(&ret)
 	fmt.Println(ret.Success + ":" + ret.Error)
+
+	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
 }
 
 func Delete(key string) {
@@ -84,8 +97,7 @@ func Delete(key string) {
   	if err != nil {
     	fmt.Println("Post Delete: ", err.Error())
     	return
-  	} 
- 	defer response.Body.Close()
+  	}
   	
   	dec := json.NewDecoder(response.Body)
   	type Delete struct{
@@ -96,6 +108,9 @@ func Delete(key string) {
 	var ret Delete
 	dec.Decode(&ret)
 	fmt.Println(ret.Success + ":" + ret.Value + ":" + ret.Error)
+
+	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
 }
 
 func Get(key string) {
@@ -103,9 +118,8 @@ func Get(key string) {
   	if err != nil {
     	fmt.Println("Post Get: ", err.Error())
     	return
-  	} 
- 	defer response.Body.Close()
-  	
+  	}
+ 	
   	dec := json.NewDecoder(response.Body)
   	type Get struct{
 		Success string
@@ -115,6 +129,9 @@ func Get(key string) {
 	var ret Get
 	dec.Decode(&ret)
 	fmt.Println(ret.Success + ":" + ret.Value + ":" + ret.Error)
+
+	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
 }
 
 func Update(key,value string) {
@@ -124,7 +141,6 @@ func Update(key,value string) {
     	fmt.Println("Post Update: ", err.Error())
     	return
   	} 
- 	defer response.Body.Close()
   	
   	dec := json.NewDecoder(response.Body)
   	type Update struct{
@@ -134,6 +150,9 @@ func Update(key,value string) {
 	var ret Update
 	dec.Decode(&ret)
 	fmt.Println(ret.Success + ":" + ret.Error)
+
+	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
 }
 
 
@@ -143,7 +162,7 @@ func CountKey() {
     	fmt.Println("Post Update: ", err.Error())
     	return
   	} 
-	defer response.Body.Close()
+
   	dec := json.NewDecoder(response.Body)
   	type CountKey struct{
 		Result string
@@ -151,6 +170,9 @@ func CountKey() {
 	var count CountKey
 	dec.Decode(&count)
 	fmt.Println("count key: " + count.Result)
+
+	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
 }
 
 func Dump() {
@@ -159,7 +181,7 @@ func Dump() {
     	fmt.Println("Post Update: ", err.Error())
     	return
   	} 
-	defer response.Body.Close()
+
   	dec := json.NewDecoder(response.Body)
 	dumped_data := make(map[string]string)
 	dec.Decode(&dumped_data)
@@ -167,6 +189,9 @@ func Dump() {
 	for key, value := range dumped_data {
     	fmt.Println("Key:", key, "    Value:", value)
 	} 
+
+	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
 }
 
 func Shutdown(address string) {
@@ -175,6 +200,7 @@ func Shutdown(address string) {
     	fmt.Println("Post Shutdown: ", err.Error())
     	return
   	} 
+  	io.Copy(ioutil.Discard, response.Body) 
 	response.Body.Close()
 }
 
@@ -182,14 +208,20 @@ func StartServer(argument string) {
 	cmd := exec.Command("python", "start_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	fmt.Println(cmd.Start())
+	err := cmd.Start()
+	if err != nil {
+		PrintLog(MODE, err.Error())
+	}
 }
 
 func StopServer(argument string) {
 	cmd := exec.Command("python", "stop_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	fmt.Println(cmd.Run())
+	err := cmd.Run()
+	if err != nil {
+		PrintLog(MODE, err.Error())
+	}
 	stop_chan <- 0
 }
 
@@ -197,6 +229,8 @@ func StopServer(argument string) {
 func main() {
 	server_address, backup_address = DecodeConfig()
 	server_address, backup_address = "http://" + server_address, "http://" + backup_address
+	Shutdown(server_address)
+	Shutdown(backup_address)
 	StartServer("-b")
 	StartServer("-p")
 	time.Sleep(time.Second*3)
@@ -242,7 +276,7 @@ func main() {
 	time.Sleep(time.Second)	
 	go StopServer("-b")
 	return_chan := <- stop_chan
-	fmt.Println(return_chan)
+	//fmt.Println(return_chan)
 	//time.Sleep(time.Second)
 
 	Insert("adsewgeageaegaewgageagha", "*/%&&/%/%/%$$&**")
@@ -262,6 +296,7 @@ func main() {
 		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
 	}
 
-	//Shutdown()
+	Shutdown(server_address)
+	Shutdown(backup_address)
 
 }

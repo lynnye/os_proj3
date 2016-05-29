@@ -11,6 +11,7 @@ import (
 	"sync"
 	"os"
 	"net/url"
+	"io"
 )
 
 var DataBase = struct{
@@ -70,13 +71,16 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 	{
 		response, err := http.PostForm("http://" + backup_address + "/kv/insert", 
     		url.Values{"key": {key}, "value": {value}})
+
   		if err != nil {
     		PrintLog(MODE, "Post Insert to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In insert, backup fails"))
     		DataBase.Unlock()
     		return
-  		}	 
-  		response.Body.Close()
+  		}	
+  		io.Copy(ioutil.Discard, response.Body) 
+		response.Body.Close() 
+  		
 
 		succ_insert := Insert(key, value)
 		if(!succ_insert){
@@ -89,7 +93,6 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 			"success":"true", 
 		})		
 		fmt.Fprintln(w, string(json_encode))
-		//request.Body.Close()	
 	}
 	DataBase.Unlock()
 }
@@ -127,13 +130,15 @@ func HandleDelete(w http.ResponseWriter, request *http.Request) {
 	{
 		response, err := http.PostForm("http://" + backup_address + "/kv/delete", 
     		url.Values{"key": {key}})
-		response.Body.Close()
+
   		if err != nil {
     		PrintLog(MODE, "Post Delete to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In delete, backup fails"))
     		DataBase.Unlock()
     		return
   		}	 
+  		io.Copy(ioutil.Discard, response.Body) 
+		response.Body.Close()
 
 		succ_delete, delete_value := Delete(key)
 		if(!succ_delete){
@@ -179,13 +184,15 @@ func HandleGet(w http.ResponseWriter, request *http.Request) {
 	DataBase.RLock()
 	{
 		response, err := http.Get("http://" + backup_address + "/kv/get?key=" + key)
-		response.Body.Close()
+
   		if err != nil {
     		PrintLog(MODE, "Post Get to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In get, backup fails"))
     		DataBase.RUnlock()
     		return
   		}	 
+  		io.Copy(ioutil.Discard, response.Body) 
+		response.Body.Close()
 
 		succ_get, get_value := Get(key)
 		if(!succ_get){
@@ -237,13 +244,15 @@ func HandleUpdate(w http.ResponseWriter, request *http.Request) {
 	{
 		response, err := http.PostForm("http://" + backup_address + "/kv/update", 
     		url.Values{"key": {key}, "value": {value}})
-		response.Body.Close()
+
   		if err != nil {
     		PrintLog(MODE, "Post Update to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In update, backup fails"))
     		DataBase.Unlock()
     		return
   		}	 
+  		io.Copy(ioutil.Discard, response.Body) 
+		response.Body.Close()
 
 		succ_update := Update(key, value)
 		if(!succ_update){

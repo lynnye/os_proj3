@@ -3,10 +3,11 @@ import (
 	"net/http"
 	"net/url"
 	"fmt"
-	//"io/ioutil"
+	"io/ioutil"
 	"encoding/json"
 	"strconv"
 	"time"
+	"io"
 )
 
 const serverAddress = "http://127.0.0.1:1234"
@@ -22,9 +23,10 @@ func Insert(key,value string) {
     	fmt.Println("Post Insert: ", err.Error())
     	return
   	} 
- 	defer response.Body.Close()
+  	io.Copy(ioutil.Discard, response.Body)
   	
   	dec := json.NewDecoder(response.Body)
+  	response.Body.Close()
   	type Insert struct{
 		Success string
 		Error string
@@ -41,9 +43,10 @@ func InsertFalse(key,value string) {
     	fmt.Println("Post Insert: ", err.Error())
     	return
   	} 
- 	defer response.Body.Close()
+  	io.Copy(ioutil.Discard, response.Body)
   	
   	dec := json.NewDecoder(response.Body)
+  	response.Body.Close()
   	type Insert struct{
 		Success string
 		Error string
@@ -59,10 +62,11 @@ func Delete(key string) {
   	if err != nil {
     	fmt.Println("Post Delete: ", err.Error())
     	return
-  	} 
- 	defer response.Body.Close()
+  	}
+  	io.Copy(ioutil.Discard, response.Body) 
   	
   	dec := json.NewDecoder(response.Body)
+  	response.Body.Close()
   	type Delete struct{
 		Success string
 		Value string
@@ -78,10 +82,11 @@ func Get(key string) {
   	if err != nil {
     	fmt.Println("Post Get: ", err.Error())
     	return
-  	} 
- 	defer response.Body.Close()
-  	
+  	}
+  	io.Copy(ioutil.Discard, response.Body) 
+ 	
   	dec := json.NewDecoder(response.Body)
+  	response.Body.Close()
   	type Get struct{
 		Success string
 		Value string
@@ -99,9 +104,10 @@ func Update(key,value string) {
     	fmt.Println("Post Update: ", err.Error())
     	return
   	} 
- 	defer response.Body.Close()
+  	io.Copy(ioutil.Discard, response.Body) 
   	
   	dec := json.NewDecoder(response.Body)
+  	response.Body.Close()
   	type Update struct{
 		Success string
 		Error string
@@ -118,8 +124,10 @@ func CountKey() {
     	fmt.Println("Post Update: ", err.Error())
     	return
   	} 
-	defer response.Body.Close()
+	io.Copy(ioutil.Discard, response.Body) 
+
   	dec := json.NewDecoder(response.Body)
+  	response.Body.Close()
   	type CountKey struct{
 		Result string
 	}
@@ -134,8 +142,10 @@ func Dump() {
     	fmt.Println("Post Update: ", err.Error())
     	return
   	} 
-	defer response.Body.Close()
+  	io.Copy(ioutil.Discard, response.Body) 
+
   	dec := json.NewDecoder(response.Body)
+  	response.Body.Close()
 	dumped_data := make(map[string]string)
 	dec.Decode(&dumped_data)
 	fmt.Println("Dumped data:")
@@ -150,6 +160,7 @@ func Shutdown() {
     	fmt.Println("Post Shutdown: ", err.Error())
     	return
   	} 
+  	io.Copy(ioutil.Discard, response.Body) 
 	response.Body.Close()
 }
 
