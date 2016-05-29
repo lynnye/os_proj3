@@ -1,0 +1,66 @@
+<nil>
+<nil>
+In primary server: server address: 127.0.0.1:1234
+In primary server: backup address: 127.0.0.2:1234
+Initial dump:  Get http://127.0.0.2:1234/kvman/dump: dial tcp 127.0.0.2:1234: getsockopt: connection refused
+In backup server: server address: 127.0.0.1:1234
+In backup server: backup address: 127.0.0.2:1234
+In primary server: dumping database : 0
+In backup server: Initial Dumped data:
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Update:  Get 127.0.0.1:1234/kvman/countkey: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Update:  Get 127.0.0.1:1234/kvman/countkey: unsupported protocol scheme ""
+Post Delete:  Post 127.0.0.1:1234/kv/delete: unsupported protocol scheme ""
+Post Update:  Get 127.0.0.1:1234/kvman/countkey: unsupported protocol scheme ""
+Post Delete:  Post 127.0.0.1:1234/kv/delete: unsupported protocol scheme ""
+Post Update:  Get 127.0.0.1:1234/kvman/countkey: unsupported protocol scheme ""
+Post Get:  Get 127.0.0.1:1234/kv/get?key=1: unsupported protocol scheme ""
+Post Get:  Get 127.0.0.1:1234/kv/get?key=3: unsupported protocol scheme ""
+Post Get:  Get 127.0.0.1:1234/kv/get?key=298187&* ////""=: unsupported protocol scheme ""
+Post Update:  Post 127.0.0.1:1234/kv/update: unsupported protocol scheme ""
+Post Get:  Get 127.0.0.1:1234/kv/get?key=1: unsupported protocol scheme ""
+Post Update:  Get 127.0.0.1:1234/kvman/countkey: unsupported protocol scheme ""
+Post Update:  Get 127.0.0.1:1234/kvman/dump: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+<nil>
+In primary server: In shutdown, primary server shutdown
+http://127.0.0.1:1234 http://127.0.0.2:1234
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+<nil>
+In primary server: server address: 127.0.0.1:1234
+In primary server: backup address: 127.0.0.2:1234
+In backup server: dumping database : 0
+In primary server: Initial Dumped data:
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+<nil>
+In backup server: In shutdown, backup server shutdown
+http://127.0.0.1:1234 http://127.0.0.2:1234
+Post Insert:  Post 127.0.0.1:1234/kv/insert: unsupported protocol scheme ""
+Post Update:  Get 127.0.0.1:1234/kvman/dump: unsupported protocol scheme ""
+<nil>
+In primary server: In shutdown, primary server shutdown
+http://127.0.0.1:1234 http://127.0.0.2:1234
