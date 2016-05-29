@@ -173,7 +173,7 @@ func StopServer(argument string) {
 func main() {
 	StartServer("-b")
 	StartServer("-p")
-	time.Sleep(time.Second*4)
+	time.Sleep(time.Second*3)
 
 	Insert("1", "100")
 	Insert("2", "200")
@@ -197,21 +197,26 @@ func main() {
 	
 	for i := 1; i <= 20; i ++ {
 		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
-		time.Sleep(time.Second)
+		//time.Sleep(time.Second)
 	}
-
+time.Sleep(time.Second)
 	StopServer("-p")
-	time.Sleep(time.Second*3)
+	
 	Insert("adfegaegae", "3dg34g3h")
+	
 	StartServer("-p")
-	time.Sleep(time.Second*3)
+
+	time.Sleep(time.Second)
 	Insert("adfegaegae", "*****************")
+	
+time.Sleep(time.Second)	
 	StopServer("-b")
-	time.Sleep(time.Second*3)
+	//time.Sleep(time.Second)
 	Insert("adsewgeageaegaewgageagha", "*/%&&/%/%/%$$&**")
 	Dump()
+time.Sleep(time.Second)
 	StopServer("-p")
-	time.Sleep(time.Second*3)
+	//time.Sleep(time.Second)
 
 	/*
 	for i := 1; i <=1000000; i ++ {
