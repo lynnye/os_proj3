@@ -13,9 +13,11 @@ import (
 	"strings"
 )
 
-var serverAddress = "http://127.0.0.1:1234"
+var server_address = "http://127.0.0.1:1234"
+var backup_address = "http://127.0.0.2:1234"
+var stop_chan = make(chan int)
 
-func DecodeConfigServer() (string) {
+func DecodeConfig() (string, string) {
 	config_file, err := ioutil.ReadFile("../conf/settings.conf")
 	if err != nil{
 		fmt.Println("Load config file error")
@@ -31,15 +33,15 @@ func DecodeConfigServer() (string) {
 		fmt.Println("Parse config file error")
 		log.Fatal("Parse config file(Json): ", err.Error())
 	}
-	return config.Primary + ":" + config.Port
-}
+	return config.Primary + ":" + config.Port, config.Backup + ":" + config.Port
+}	
 
 type BackupResponse struct{
 	Success string
 }
 
 func Insert(key,value string) {
-	response, err := http.PostForm(serverAddress + "/kv/insert", 
+	response, err := http.PostForm(server_address + "/kv/insert", 
     	url.Values{"key": {key}, "value": {value}})
   	if err != nil {
     	fmt.Println("Post Insert: ", err.Error())
@@ -58,7 +60,7 @@ func Insert(key,value string) {
 }
 
 func InsertFalse(key,value string) {
-	response, err := http.PostForm(serverAddress + "/kv/insert", 
+	response, err := http.PostForm(server_address + "/kv/insert", 
     	url.Values{"keyfalse": {key}, "value": {value}})
   	if err != nil {
     	fmt.Println("Post Insert: ", err.Error())
@@ -77,7 +79,7 @@ func InsertFalse(key,value string) {
 }
 
 func Delete(key string) {
-	response, err := http.PostForm(serverAddress + "/kv/delete", 
+	response, err := http.PostForm(server_address + "/kv/delete", 
     	url.Values{"key": {key}})
   	if err != nil {
     	fmt.Println("Post Delete: ", err.Error())
@@ -97,7 +99,7 @@ func Delete(key string) {
 }
 
 func Get(key string) {
-	response, err := http.Get(serverAddress + "/kv/get?key=" + key)
+	response, err := http.Get(server_address + "/kv/get?key=" + key)
   	if err != nil {
     	fmt.Println("Post Get: ", err.Error())
     	return
@@ -116,7 +118,7 @@ func Get(key string) {
 }
 
 func Update(key,value string) {
-	response, err := http.PostForm(serverAddress + "/kv/update", 
+	response, err := http.PostForm(server_address + "/kv/update", 
     	url.Values{"key": {key}, "value": {value}})
   	if err != nil {
     	fmt.Println("Post Update: ", err.Error())
@@ -136,7 +138,7 @@ func Update(key,value string) {
 
 
 func CountKey() {
-	response, err := http.Get(serverAddress + "/kvman/countkey")
+	response, err := http.Get(server_address + "/kvman/countkey")
 	if err != nil {
     	fmt.Println("Post Update: ", err.Error())
     	return
@@ -152,7 +154,7 @@ func CountKey() {
 }
 
 func Dump() {
-	response, err := http.Get(serverAddress + "/kvman/dump")
+	response, err := http.Get(server_address + "/kvman/dump")
 	if err != nil {
     	fmt.Println("Post Update: ", err.Error())
     	return
@@ -167,8 +169,8 @@ func Dump() {
 	} 
 }
 
-func Shutdown() {
-	response, err := http.Get(serverAddress + "/kvman/shutdown")
+func Shutdown(address string) {
+	response, err := http.Get(address + "/kvman/shutdown")
 	if err != nil {
     	fmt.Println("Post Shutdown: ", err.Error())
     	return
@@ -187,12 +189,14 @@ func StopServer(argument string) {
 	cmd := exec.Command("python", "stop_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	fmt.Println(cmd.Start())
+	fmt.Println(cmd.Run())
+	stop_chan <- 0
 }
 
 
 func main() {
-	serverAddress = DecodeConfigServer()
+	server_address, backup_address = DecodeConfig()
+	server_address, backup_address = "http://" + server_address, "http://" + backup_address
 	StartServer("-b")
 	StartServer("-p")
 	time.Sleep(time.Second*3)
@@ -221,9 +225,13 @@ func main() {
 		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
 		//time.Sleep(time.Second)
 	}
-time.Sleep(time.Second)
-	StopServer("-p")
-	
+
+	time.Sleep(time.Second)
+	//go StopServer("-p")
+	//_ = <- stop_chan
+	//time.Sleep(time.Second)
+	Shutdown(server_address)
+
 	Insert("adfegaegae", "3dg34g3h")
 	
 	StartServer("-p")
@@ -231,20 +239,29 @@ time.Sleep(time.Second)
 	time.Sleep(time.Second)
 	Insert("adfegaegae", "*****************")
 	
-time.Sleep(time.Second)	
-	StopServer("-b")
-	//time.Sleep(time.Second)
-	Insert("adsewgeageaegaewgageagha", "*/%&&/%/%/%$$&**")
-	Dump()
-time.Sleep(time.Second)
-	StopServer("-p")
+	time.Sleep(time.Second)	
+	go StopServer("-b")
+	return_chan := <- stop_chan
+	fmt.Println(return_chan)
 	//time.Sleep(time.Second)
 
-	/*
+	Insert("adsewgeageaegaewgageagha", "*/%&&/%/%/%$$&**")
+	Dump()
+
+	time.Sleep(time.Second)
+	go StopServer("-p")
+	return_chan = <- stop_chan
+	fmt.Println(return_chan)
+	//time.Sleep(time.Second)
+
+	StartServer("-b")
+	StartServer("-p")
+	time.Sleep(time.Second*3)
+	
 	for i := 1; i <=1000000; i ++ {
 		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
 	}
 
-	Shutdown()*/
+	//Shutdown()
 
 }
