@@ -4,17 +4,22 @@ import json
 import urllib2
 
 if __name__ == "__main__":
-	settings = json.loads(open("../conf/settings.conf").read())
-	server_address = "http://" + settings["primary"] + ":" + settings["port"]
-	backup_address = "http://" + settings["backup"] + ":" + settings["port"]
-	print server_address, backup_address
+	#settings = json.loads(open("../conf/settings.conf").read())
+	#server_address = "http://" + settings["primary"] + ":" + settings["port"]
+	#bctkup_address = "http://" + settings["backup"] + ":" + settings["port"]
+	#print server_address, backup_address
 
 	if len(sys.argv) == 2 and sys.argv[1] == '-p' :
-		urllib2.urlopen(server_address + "/kvman/shutdown")
+		#urllib2.urlopen(server_address + "/kvman/shutdown")
+		killall("http_server")
 		quit()
 	if len(sys.argv) == 2 and sys.argv[1] == '-b' :
-		urllib2.urlopen(backup_address + "/kvman/shutdown")
+		#urllib2.urlopen(backup_address + "/kvman/shutdown")
+		killall("http_backup")
 		quit()
 
 	print "Please specify the argument: -p or -b?"
+
+
+
 
