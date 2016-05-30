@@ -225,6 +225,13 @@ func StopServer(argument string) {
 	stop_chan <- 0
 }
 
+func ConcurrentTest() {
+	for i := 1; i <=1000; i ++ {
+		go Get(strconv.Itoa(i))
+		go Update(strconv.Itoa(i), "updated")
+		go Delete(strconv.Itoa(i))
+	}
+}
 
 func main() {
 	server_address, backup_address = DecodeConfig()
@@ -275,27 +282,24 @@ func main() {
 	
 	time.Sleep(time.Second)	
 	go StopServer("-b")
-	return_chan := <- stop_chan
+	_ = <- stop_chan
 	//fmt.Println(return_chan)
 	//time.Sleep(time.Second)
 
 	Insert("adsewgeageaegaewgageagha", "*/%&&/%/%/%$$&**")
 	Dump()
-
-	time.Sleep(time.Second)
-	go StopServer("-p")
-	return_chan = <- stop_chan
-	fmt.Println(return_chan)
 	//time.Sleep(time.Second)
 
 	StartServer("-b")
-	StartServer("-p")
 	time.Sleep(time.Second*3)
 	
 	for i := 1; i <=1000000; i ++ {
 		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
 	}
 
+	ConcurrentTest()
+
+	time.Sleep(time.Second*2)
 	Shutdown(server_address)
 	Shutdown(backup_address)
 
