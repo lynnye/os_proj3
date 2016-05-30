@@ -205,7 +205,7 @@ func Shutdown(address string) {
 }
 
 func StartServer(argument string) {
-	cmd := exec.Command("python", "start_server", argument)
+	cmd := exec.Command("./start_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Start()
@@ -215,7 +215,7 @@ func StartServer(argument string) {
 }
 
 func StopServer(argument string) {
-	cmd := exec.Command("python", "stop_server", argument)
+	cmd := exec.Command("./stop_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
