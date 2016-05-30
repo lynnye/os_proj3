@@ -208,7 +208,7 @@ func StartServer(argument string) {
 	cmd := exec.Command("./start_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Start()
+	err := cmd.Run()
 	if err != nil {
 		PrintLog(MODE, err.Error())
 	}
@@ -222,7 +222,7 @@ func StopServer(argument string) {
 	if err != nil {
 		PrintLog(MODE, err.Error())
 	}
-	stop_chan <- 0
+	//stop_chan <- 0
 }
 
 func ConcurrentTest() {
@@ -236,11 +236,11 @@ func ConcurrentTest() {
 func main() {
 	server_address, backup_address = DecodeConfig()
 	server_address, backup_address = "http://" + server_address, "http://" + backup_address
+
 	Shutdown(server_address)
 	Shutdown(backup_address)
 	StartServer("-b")
 	StartServer("-p")
-	time.Sleep(time.Second*3)
 
 	Insert("1", "100")
 	Insert("2", "200")
@@ -263,35 +263,25 @@ func main() {
 	Dump()
 	
 	for i := 1; i <= 20; i ++ {
-		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
-		//time.Sleep(time.Second)
+		Insert(strconv.Itoa(i), strconv.Itoa(i*1000))
 	}
 
 	time.Sleep(time.Second)
-	//go StopServer("-p")
-	//_ = <- stop_chan
-	//time.Sleep(time.Second)
 	Shutdown(server_address)
 
 	Insert("adfegaegae", "3dg34g3h")
 	
 	StartServer("-p")
 
-	time.Sleep(time.Second)
 	Insert("adfegaegae", "*****************")
 	
 	time.Sleep(time.Second)	
-	go StopServer("-b")
-	_ = <- stop_chan
-	//fmt.Println(return_chan)
-	//time.Sleep(time.Second)
+	StopServer("-b")
 
 	Insert("adsewgeageaegaewgageagha", "*/%&&/%/%/%$$&**")
 	Dump()
-	//time.Sleep(time.Second)
 
 	StartServer("-b")
-	time.Sleep(time.Second*3)
 	
 	for i := 1; i <=1000000; i ++ {
 		Insert(strconv.Itoa(i), strconv.Itoa(i*1000));
@@ -299,7 +289,7 @@ func main() {
 
 	ConcurrentTest()
 
-	time.Sleep(time.Second*2)
+	time.Sleep(time.Second)
 	Shutdown(server_address)
 	Shutdown(backup_address)
 
