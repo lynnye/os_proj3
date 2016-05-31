@@ -177,7 +177,7 @@ func Update(key,value string) (string,string){
 }
 
 
-func CountKey() (string, string){
+func CountKey() (string, string, string){
 	response, err := http.Get("http://" + server_address + "/kvman/countkey")
 	if err != nil {
     	if MODE == "debug" {
@@ -189,6 +189,7 @@ func CountKey() (string, string){
   	dec := json.NewDecoder(response.Body)
   	type CountKey struct{
 		Result string
+		Error string
 	}
 	var count CountKey
 	dec.Decode(&count)
@@ -197,7 +198,7 @@ func CountKey() (string, string){
 	}
 	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
-	return "",count.Result
+	return "",count.Result,count.Error
 }
 
 func Dump() (string, map[string]string){
@@ -349,15 +350,15 @@ func BasicTest() {
 var localData map[string]string
 var globalLock sync.Mutex
 
-func Fail(info string) {
-	fmt.Println("fail! " + info)
+func Fail() {
+	fmt.Println("fail!")
 	os.Exit(0)
 }
 
 func RandomTestFunction(wg *sync.WaitGroup) {
 	rand.Seed(time.Now().UnixNano())  
 	defer wg.Done()
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 5; i++ {
 		x := rand.Intn(4)
 	
 		if x == 0 {//insert
@@ -365,11 +366,11 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			globalLock.Lock()
 			err,mes := Insert(strconv.Itoa(k), strconv.Itoa(k))
 			if err != "" {
-				Fail("insert")
+				Fail()
 			}
 			_, ok := localData[strconv.Itoa(k)]
 			if ok == true && mes == "true" || ok == false && mes == "false" {
-				Fail("insert")
+				Fail()
 			}
 			if ok == false {
 				localData[strconv.Itoa(k)] = strconv.Itoa(k)
@@ -388,7 +389,7 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			}
 			err,mes,value := Delete(k)
 			if err != ""  || mes == "false" || value != localData[k] {
-				Fail("delete" + " " + err + " " + mes + " " + value + " " + localData[k] + " " + k)
+				Fail()
 			}
 			delete(localData, k)
 			globalLock.Unlock()
@@ -409,7 +410,7 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			err, mes := Update(k, val)
 			localData[k] = val
 			if err != "" || mes == "false" {
-				Fail("update" + " " + mes)
+				Fail()
 			}
 			globalLock.Unlock()
 		} else if x == 3 {//get
@@ -426,7 +427,7 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			}
 			err, mes, val := Get(k)
 			if err != "" || mes == "false" || val != localData[k] {
-				Fail("get " + err + " " + mes + " " + val + " " + localData[k])
+				Fail()
 			}
 			globalLock.Unlock()
 		}
@@ -441,23 +442,23 @@ func RandomTest() {
 
  	var wg sync.WaitGroup
 	localData = make(map[string]string)	
-	for i := 1; i <= 10; i++ {
-		for j := 1; j <= 10; j++ {
+	for i := 1; i <= 5; i++ {
+		for j := 1; j <= 5; j++ {
 			wg.Add(1)
 			go RandomTestFunction(&wg)
 		}
 		wg.Wait()
 		
-		err,size := CountKey()
-		if err != "" || size != strconv.Itoa(len(localData)) {
-			Fail("size")
+		err,size,mes := CountKey()
+		if err != "" || size != strconv.Itoa(len(localData) || mes != "pass") {
+			Fail()
 		}
 		
 		err,dumped_data := Dump()
 		
 		for key,val := range dumped_data {
 			if err != "" || localData[key] != val {
-				Fail("dump")
+				Fail()
 			}
 		}
 		
@@ -479,18 +480,47 @@ func RandomTest() {
 	Shutdown(backup_address)
 }
 
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 func ThroughoutTest(){
 
+	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
+	StartServer("-b")
+	StartServer("-p")
+	//startTime := time.Now()
+	for i := 1; i <= 1000; i++ {
+		tmp := make([]rune, 32000)
+		for j := range(tmp) {
+			tmp[j] = letters[rand.Intn(len(letters))]
+		}
+		b := string(tmp)
+		go func() {
+			k := rand.Intn(4)
+			if k == 0 {
+				Insert(b, b)
+			} else if k == 1 {
+				Update(b, b)
+			} else if k == 2 {
+				Get(b)
+			} else if k == 3 {
+				Delete(b)
+			}	
+		}()
+	}
+	//endTime := time.Now()
+	//fmt.Println(endTime.Sub(startTime))
+	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
 }
  
 func main() {
 	server_address, backup_address = DecodeConfig()
 	
-	
-	
 	//LianlianTest()	
 	//BasicTest()
+	//ThroughoutTest()
 	RandomTest()
-	ThroughoutTest()
 	return	
 }
