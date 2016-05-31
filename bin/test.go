@@ -12,13 +12,15 @@ import (
 	"log"
 	"strings"
 	"io"
+	"sync"
+	"math/rand"
 )
 
 var server_address = "http://127.0.0.1:1234"
 var backup_address = "http://127.0.0.2:1234"
 var stop_chan = make(chan int)
 
-const MODE = "debug"
+const MODE = ""
 
 func PrintLog(condition string, log_content string) {
 	if(condition == "debug") {
@@ -49,12 +51,14 @@ type BackupResponse struct{
 	Success string
 }
 
-func Insert(key,value string) {
+func Insert(key,value string) (string, string){
 	response, err := http.PostForm("http://" + server_address + "/kv/insert", 
     	url.Values{"key": {key}, "value": {value}})
   	if err != nil {
-    	fmt.Println("Post Insert: ", err.Error())
-    	return
+  	if MODE == "debug" {
+    		fmt.Println("Post Insert: ", err.Error())
+    	}
+    	return "error", ""
   	} 
   	
   	dec := json.NewDecoder(response.Body)
@@ -64,17 +68,22 @@ func Insert(key,value string) {
 	}
 	var ret Insert
 	dec.Decode(&ret)
-	fmt.Println(ret.Success + ":" + ret.Error)
-
+	if MODE == "debug" {
+		fmt.Println(ret.Success + ":" + ret.Error)
+    	}
+	
 	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
+	return "", ret.Success	
 }
 
 func InsertFalse(key,value string) {
 	response, err := http.PostForm("http://" + server_address + "/kv/insert", 
     	url.Values{"keyfalse": {key}, "value": {value}})
   	if err != nil {
-    	fmt.Println("Post Insert: ", err.Error())
+  	if MODE == "debug" {
+    		fmt.Println("Post Insert: ", err.Error())
+    	}
     	return
   	} 
   	
@@ -91,12 +100,14 @@ func InsertFalse(key,value string) {
 	response.Body.Close()
 }
 
-func Delete(key string) {
+func Delete(key string) (string, string, string){
 	response, err := http.PostForm("http://" + server_address + "/kv/delete", 
     	url.Values{"key": {key}})
   	if err != nil {
-    	fmt.Println("Post Delete: ", err.Error())
-    	return
+    	if MODE == "debug" {
+    		fmt.Println("Post Delete: ", err.Error())
+    	}
+    	return "error","","" 
   	}
   	
   	dec := json.NewDecoder(response.Body)
@@ -107,17 +118,21 @@ func Delete(key string) {
 	}
 	var ret Delete
 	dec.Decode(&ret)
-	fmt.Println(ret.Success + ":" + ret.Value + ":" + ret.Error)
-
+	if MODE == "debug" {
+		fmt.Println(ret.Success + ":" + ret.Value + ":" + ret.Error)
+	}
 	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
+	return "",ret.Success,ret.Value
 }
 
-func Get(key string) {
+func Get(key string) (string,string,string){
 	response, err := http.Get("http://" + server_address + "/kv/get?key=" + key)
   	if err != nil {
-    	fmt.Println("Post Get: ", err.Error())
-    	return
+  	if MODE == "debug" {
+  	  	fmt.Println("Post Get: ", err.Error())
+    	}
+    	return "error", "",""
   	}
  	
   	dec := json.NewDecoder(response.Body)
@@ -128,18 +143,22 @@ func Get(key string) {
 	}
 	var ret Get
 	dec.Decode(&ret)
-	fmt.Println(ret.Success + ":" + ret.Value + ":" + ret.Error)
+//	fmt.Println(ret.Success + ":" + ret.Value + ":" + ret.Error)
 
 	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
+	
+	return "", ret.Success,ret.Value
 }
 
-func Update(key,value string) {
+func Update(key,value string) (string,string){
 	response, err := http.PostForm("http://" + server_address + "/kv/update", 
     	url.Values{"key": {key}, "value": {value}})
   	if err != nil {
-    	fmt.Println("Post Update: ", err.Error())
-    	return
+    	if MODE == "debug" {
+    		fmt.Println("Post Update: ", err.Error())
+    	}
+    	return "error",""
   	} 
   	
   	dec := json.NewDecoder(response.Body)
@@ -149,18 +168,22 @@ func Update(key,value string) {
 	}
 	var ret Update
 	dec.Decode(&ret)
-	fmt.Println(ret.Success + ":" + ret.Error)
-
+	if MODE == "debug" {
+		fmt.Println(ret.Success + ":" + ret.Error)
+	}
 	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
+	return "",ret.Success
 }
 
 
-func CountKey() {
+func CountKey() (string, string){
 	response, err := http.Get("http://" + server_address + "/kvman/countkey")
 	if err != nil {
-    	fmt.Println("Post Update: ", err.Error())
-    	return
+    	if MODE == "debug" {
+    		fmt.Println("Post Update: ", err.Error())
+    	}
+    	return "error", ""
   	} 
 
   	dec := json.NewDecoder(response.Body)
@@ -169,60 +192,75 @@ func CountKey() {
 	}
 	var count CountKey
 	dec.Decode(&count)
-	fmt.Println("count key: " + count.Result)
-
+	if MODE == "debug" {
+		fmt.Println("count key: " + count.Result)
+	}
 	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
+	return "",count.Result
 }
 
-func Dump() {
+func Dump() (string, map[string]string){
 	response, err := http.Get("http://" + server_address + "/kvman/dump")
+	
+	dumped_data := make(map[string]string)
 	if err != nil {
-    	fmt.Println("Post Update: ", err.Error())
-    	return
+    	if MODE == "debug" {
+    		fmt.Println("Post Update: ", err.Error())
+    	}
+    	return "error", dumped_data
   	} 
 
   	dec := json.NewDecoder(response.Body)
-	dumped_data := make(map[string]string)
 	dec.Decode(&dumped_data)
-	fmt.Println("Dumped data:")
-	for key, value := range dumped_data {
-    	fmt.Println("Key:", key, "    Value:", value)
+	if MODE == "debug" {
+    
+		fmt.Println("Dumped data:")
+		for key, value := range dumped_data {
+    			fmt.Println("Key:", key, "    Value:", value)
+    		}
 	} 
 
 	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
+	return "", dumped_data
 }
 
-func Shutdown(address string) {
+func Shutdown(address string) string{
 	response, err := http.Get("http://" + address + "/kvman/shutdown")
 	if err != nil {
-    	fmt.Println("Post Shutdown: ", err.Error())
-    	return
+    	if MODE == "debug" {
+    		fmt.Println("Post Shutdown: ", err.Error())
+    	}
+    	return "error"
   	} 
   	io.Copy(ioutil.Discard, response.Body) 
 	response.Body.Close()
+	return ""
 }
 
-func StartServer(argument string) {
+func StartServer(argument string) string{
 	cmd := exec.Command("./start_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
 		PrintLog(MODE, err.Error())
+		return "error"
 	}
+	return ""
 }
 
-func StopServer(argument string) {
+func StopServer(argument string) string{
 	cmd := exec.Command("./stop_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
 		PrintLog(MODE, err.Error())
+		return "error"
 	}
-	//stop_chan <- 0
+	return ""
 }
 
 func ConcurrentTest() {
@@ -284,29 +322,175 @@ func LianlianTest() {
 }
 
 func BasicTest() {
-	
+	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
+	StartServer("-b")
+	StartServer("-p")
 	for i := 1; i <= 10; i++ {
-		go Insert(strconv.Itoa(i), strconv.Itoa(i * 100))
+		Insert(strconv.Itoa(i), strconv.Itoa(i * 100))
 	}
 	
 	for i := 1; i <= 10; i++ {
 		go Get(strconv.Itoa(i))
 	}
-}
-
-func main() {
-	server_address, backup_address = DecodeConfig()
 	
-	Shutdown(server_address)
-	Shutdown(backup_address)
+	time.Sleep(time.Second)
+	StopServer("-b")
+	time.Sleep(time.Second)
 	StartServer("-b")
-	StartServer("-p")
-	
-	//LianlianTest()	
-	BasicTest()
+	time.Sleep(time.Second)
 		
 	time.Sleep(time.Second)
 	Shutdown(server_address)
 	Shutdown(backup_address)
+}
 
+var localData map[string]string
+var globalLock sync.Mutex
+
+func Fail(info string) {
+	fmt.Println("fail! " + info)
+	os.Exit(0)
+}
+
+func RandomTestFunction(wg *sync.WaitGroup) {
+	rand.Seed(time.Now().UnixNano())  
+	defer wg.Done()
+	for i := 1; i <= 10; i++ {
+		x := rand.Intn(4)
+	
+		if x == 0 {//insert
+			k := rand.Intn(10)
+			globalLock.Lock()
+			err,mes := Insert(strconv.Itoa(k), strconv.Itoa(k))
+			if err != "" {
+				Fail("insert")
+			}
+			_, ok := localData[strconv.Itoa(k)]
+			if ok == true && mes == "true" || ok == false && mes == "false" {
+				Fail("insert")
+			}
+			if ok == false {
+				localData[strconv.Itoa(k)] = strconv.Itoa(k)
+			}
+			globalLock.Unlock()
+		} else if x == 1 {//delete
+			
+			globalLock.Lock()
+			if len(localData) == 0 {
+				globalLock.Unlock()
+				continue
+			}
+			var k string
+			for k = range(localData) {
+				break
+			}
+			err,mes,value := Delete(k)
+			if err != ""  || mes == "false" || value != localData[k] {
+				Fail("delete" + " " + err + " " + mes + " " + value + " " + localData[k] + " " + k)
+			}
+			delete(localData, k)
+			globalLock.Unlock()
+		} else if x == 2 {//update
+			
+			
+			val := strconv.Itoa(rand.Intn(100000))
+			globalLock.Lock()
+			if len(localData) == 0 {
+				
+				globalLock.Unlock()
+				continue
+			}
+			var k string
+			for k = range(localData) {
+				break
+			}
+			err, mes := Update(k, val)
+			localData[k] = val
+			if err != "" || mes == "false" {
+				Fail("update" + " " + mes)
+			}
+			globalLock.Unlock()
+		} else if x == 3 {//get
+			
+			globalLock.Lock()
+			if len(localData) == 0 {
+				
+				globalLock.Unlock()
+				continue
+			}
+			var k string
+			for k = range(localData) {
+				break
+			}
+			err, mes, val := Get(k)
+			if err != "" || mes == "false" || val != localData[k] {
+				Fail("get " + err + " " + mes + " " + val + " " + localData[k])
+			}
+			globalLock.Unlock()
+		}
+	}
+}
+func RandomTest() {
+	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
+	StartServer("-b")
+	StartServer("-p")
+
+ 	var wg sync.WaitGroup
+	localData = make(map[string]string)	
+	for i := 1; i <= 10; i++ {
+		for j := 1; j <= 10; j++ {
+			wg.Add(1)
+			go RandomTestFunction(&wg)
+		}
+		wg.Wait()
+		
+		err,size := CountKey()
+		if err != "" || size != strconv.Itoa(len(localData)) {
+			Fail("size")
+		}
+		
+		err,dumped_data := Dump()
+		
+		for key,val := range dumped_data {
+			if err != "" || localData[key] != val {
+				Fail("dump")
+			}
+		}
+		
+		k := rand.Intn(2)
+		if k == 0 {
+			StopServer("-b")
+			time.Sleep(time.Second)
+			StartServer("-b")
+		} else {
+			Shutdown(server_address)
+			time.Sleep(time.Second)
+			StartServer("-p")
+		} 
+		
+	}
+	
+	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
+}
+
+func ThroughoutTest(){
+
+}
+ 
+func main() {
+	server_address, backup_address = DecodeConfig()
+	
+	
+	
+	//LianlianTest()	
+	//BasicTest()
+	RandomTest()
+	ThroughoutTest()
+	return	
 }

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"os"
 	"net/url"
+	"io"
 )
 
 var DataBase = struct{
@@ -18,7 +19,7 @@ var DataBase = struct{
     data map[string]string
 }{data: make(map[string]string)}
 
-const MODE = "debug"
+const MODE = ""
 
 var server_address, backup_address string 
 
@@ -70,13 +71,16 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 	{
 		response, err := http.PostForm("http://" + backup_address + "/kv/insert", 
     		url.Values{"key": {key}, "value": {value}})
+
   		if err != nil {
     		PrintLog(MODE, "Post Insert to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In insert, backup fails"))
     		DataBase.Unlock()
     		return
-  		}	 
-  		response.Body.Close()
+  		}	
+  		io.Copy(ioutil.Discard, response.Body) 
+		response.Body.Close() 
+  		
 
 		succ_insert := Insert(key, value)
 		if(!succ_insert){
@@ -89,7 +93,6 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 			"success":"true", 
 		})		
 		fmt.Fprintln(w, string(json_encode))
-		//request.Body.Close()	
 	}
 	DataBase.Unlock()
 }
@@ -127,13 +130,15 @@ func HandleDelete(w http.ResponseWriter, request *http.Request) {
 	{
 		response, err := http.PostForm("http://" + backup_address + "/kv/delete", 
     		url.Values{"key": {key}})
-		response.Body.Close()
+
   		if err != nil {
     		PrintLog(MODE, "Post Delete to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In delete, backup fails"))
     		DataBase.Unlock()
     		return
   		}	 
+  		io.Copy(ioutil.Discard, response.Body) 
+		response.Body.Close()
 
 		succ_delete, delete_value := Delete(key)
 		if(!succ_delete){
@@ -179,13 +184,15 @@ func HandleGet(w http.ResponseWriter, request *http.Request) {
 	DataBase.RLock()
 	{
 		response, err := http.Get("http://" + backup_address + "/kv/get?key=" + key)
-		response.Body.Close()
+
   		if err != nil {
     		PrintLog(MODE, "Post Get to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In get, backup fails"))
     		DataBase.RUnlock()
     		return
   		}	 
+  		io.Copy(ioutil.Discard, response.Body) 
+		response.Body.Close()
 
 		succ_get, get_value := Get(key)
 		if(!succ_get){
@@ -237,13 +244,15 @@ func HandleUpdate(w http.ResponseWriter, request *http.Request) {
 	{
 		response, err := http.PostForm("http://" + backup_address + "/kv/update", 
     		url.Values{"key": {key}, "value": {value}})
-		response.Body.Close()
+
   		if err != nil {
     		PrintLog(MODE, "Post Update to Backup: " + err.Error())
     		fmt.Fprintln(w, UnsuccessResponse("In update, backup fails"))
     		DataBase.Unlock()
     		return
   		}	 
+  		io.Copy(ioutil.Discard, response.Body) 
+		response.Body.Close()
 
 		succ_update := Update(key, value)
 		if(!succ_update){
@@ -282,7 +291,7 @@ func HandleDump(w http.ResponseWriter, request *http.Request) {
 }
 
 func HandleShutdown(w http.ResponseWriter, request *http.Request) {
-	DataBase.Lock()
+	//DataBase.Lock()
 	PrintLog(MODE, "In shutdown, primary server shutdown")
 	os.Exit(0)
 }
@@ -324,14 +333,14 @@ func InitialDump() {
 }
 
 func main() {
-	http.HandleFunc("/", HandleDefault)
-	http.HandleFunc("/kv/insert", HandleInsert)
-	http.HandleFunc("/kv/delete", HandleDelete)
-	http.HandleFunc("/kv/get", HandleGet)
-	http.HandleFunc("/kv/update", HandleUpdate)
-	http.HandleFunc("/kvman/countkey", HandleCountKey)
-	http.HandleFunc("/kvman/dump", HandleDump)
-	http.HandleFunc("/kvman/shutdown", HandleShutdown)
+	go http.HandleFunc("/", HandleDefault)
+	go http.HandleFunc("/kv/insert", HandleInsert)
+	go http.HandleFunc("/kv/delete", HandleDelete)
+	go http.HandleFunc("/kv/get", HandleGet)
+	go http.HandleFunc("/kv/update", HandleUpdate)
+	go http.HandleFunc("/kvman/countkey", HandleCountKey)
+	go http.HandleFunc("/kvman/dump", HandleDump)
+	go http.HandleFunc("/kvman/shutdown", HandleShutdown)
 	server_address, backup_address = DecodeConfig()
 	PrintLog(MODE, "server address: " + server_address)
 	PrintLog(MODE, "backup address: " + backup_address)
