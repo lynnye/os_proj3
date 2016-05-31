@@ -1,0 +1,32 @@
+#!/usr/bin/python
+
+import os
+import sys
+import json
+import urllib2
+
+def start_server(server_name, server_address):
+	pid = os.fork()
+	if pid == 0:
+		os.execl(server_name, "")
+		sys.exit(0)
+	while True:
+		try:
+			urllib2.urlopen(server_address + "/kvman/dump")
+			break
+		except Exception as e:
+			time.sleep(0.01)
+	sys.exit(0)
+
+if __name__ == "__main__":
+	settings = json.loads(open("../conf/settings.conf").read())
+	server_address = "http://" + settings["primary"] + ":" + settings["port"]
+	backup_address = "http://" + settings["backup"] + ":" + settings["port"]
+
+	if len(sys.argv) == 2 and sys.argv[1] == '-p' :
+		start_server("http_server", server_address)
+	if len(sys.argv) == 2 and sys.argv[1] == '-b' :
+		start_server("http_backup", backup_address)
+
+	print "Please specify the argument: -p or -b?"
+
