@@ -19,7 +19,7 @@ var DataBase = struct{
     data map[string]string
 }{data: make(map[string]string)}
 
-const MODE = "debug"
+const MODE = "test"
 
 var server_address, backup_address string 
 
@@ -88,13 +88,13 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 			DataBase.Unlock()
 			return
 		}
-	
-		json_encode, _ := json.Marshal(map[string]string{
-			"success":"true", 
-		})		
-		fmt.Fprintln(w, string(json_encode))
 	}
 	DataBase.Unlock()
+	
+	json_encode, _ := json.Marshal(map[string]string{
+			"success":"true", 
+	})		
+	fmt.Fprintln(w, string(json_encode))
 }
 
 func Delete(key string) (bool, string) {
@@ -127,7 +127,7 @@ func HandleDelete(w http.ResponseWriter, request *http.Request) {
 	var key string = key_list[0]
 
 	DataBase.Lock()
-	{
+	
 		response, err := http.PostForm("http://" + backup_address + "/kv/delete", 
     		url.Values{"key": {key}})
 
@@ -147,12 +147,12 @@ func HandleDelete(w http.ResponseWriter, request *http.Request) {
 			return
 		}
 	
-		json_encode, _ := json.Marshal(map[string]string{
-			"success":"true", "value":delete_value,
-		})		
-		fmt.Fprintln(w, string(json_encode))		
-	}
 	DataBase.Unlock()
+	
+	json_encode, _ := json.Marshal(map[string]string{
+		"success":"true", "value":delete_value,
+	})		
+	fmt.Fprintln(w, string(json_encode))		
 }
 
 func Get(key string) (bool, string) {
@@ -182,7 +182,7 @@ func HandleGet(w http.ResponseWriter, request *http.Request) {
 	var key string = key_list[0]
 
 	DataBase.RLock()
-	{
+
 		response, err := http.Get("http://" + backup_address + "/kv/get?key=" + key)
 
   		if err != nil {
@@ -201,12 +201,13 @@ func HandleGet(w http.ResponseWriter, request *http.Request) {
 			return
 		}
 	
-		json_encode, _ := json.Marshal(map[string]string{
-			"success":"true", "value":get_value,
-		})		
-		fmt.Fprintln(w, string(json_encode))		
-	}
 	DataBase.RUnlock()
+		
+	json_encode, _ := json.Marshal(map[string]string{
+		"success":"true", "value":get_value,
+	})		
+	fmt.Fprintln(w, string(json_encode))		
+
 }
 
 func Update(key string, value string) (bool) {
@@ -260,13 +261,13 @@ func HandleUpdate(w http.ResponseWriter, request *http.Request) {
 			DataBase.Unlock()
 			return
 		}
-	
-		json_encode, _ := json.Marshal(map[string]string{
-			"success":"true", 
-		})		
-		fmt.Fprintln(w, string(json_encode))		
 	}
-	DataBase.Unlock()
+	DataBase.Unlock()	
+		
+	json_encode, _ := json.Marshal(map[string]string{
+		"success":"true", 
+	})		
+	fmt.Fprintln(w, string(json_encode))		
 }
 
 func HandleDefault(w http.ResponseWriter, request *http.Request) {
@@ -275,19 +276,23 @@ func HandleDefault(w http.ResponseWriter, request *http.Request) {
 }
 
 func HandleCountKey(w http.ResponseWriter, request *http.Request) {
+	DataBase.RLock()
 	total_key := strconv.Itoa(len(DataBase.data))
 	PrintLog(MODE, "inquiring count key : " + total_key)
 	ret, _ := json.Marshal(map[string]string{
 		"result":total_key,
 	})
 	fmt.Fprintln(w, string(ret))
+	DataBase.RUnlock()
 }
 
 func HandleDump(w http.ResponseWriter, request *http.Request) {
+	DataBase.RLock()
 	total_key := strconv.Itoa(len(DataBase.data))
 	PrintLog(MODE, "dumping database : " + total_key)
 	ret, _ := json.Marshal(DataBase.data)
 	fmt.Fprintln(w, string(ret))
+	DataBase.RUnlock()
 }
 
 func HandleShutdown(w http.ResponseWriter, request *http.Request) {
