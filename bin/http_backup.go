@@ -264,14 +264,14 @@ func InitialDump() {
 }
 
 func main() {
-	http.HandleFunc("/", HandleDefault)
-	http.HandleFunc("/kv/insert", HandleInsert)
-	http.HandleFunc("/kv/delete", HandleDelete)
-	http.HandleFunc("/kv/get", HandleGet)
-	http.HandleFunc("/kv/update", HandleUpdate)
-	http.HandleFunc("/kvman/countkey", HandleCountKey)
-	http.HandleFunc("/kvman/dump", HandleDump)
-	http.HandleFunc("/kvman/shutdown", HandleShutdown)
+	go http.HandleFunc("/", HandleDefault)
+	go http.HandleFunc("/kv/insert", HandleInsert)
+	go http.HandleFunc("/kv/delete", HandleDelete)
+	go http.HandleFunc("/kv/get", HandleGet)
+	go http.HandleFunc("/kv/update", HandleUpdate)
+	go http.HandleFunc("/kvman/countkey", HandleCountKey)
+	go http.HandleFunc("/kvman/dump", HandleDump)
+	go http.HandleFunc("/kvman/shutdown", HandleShutdown)
 	server_address, backup_address = DecodeConfig()
 	PrintLog(MODE, "server address: " + server_address)
 	PrintLog(MODE, "backup address: " + backup_address)
