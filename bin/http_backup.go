@@ -17,7 +17,7 @@ var DataBase = struct{
     data map[string]string
 }{data: make(map[string]string)}
 
-const MODE = "debug"
+const MODE = "test"
 
 var server_address, backup_address string
 
