@@ -183,7 +183,7 @@ func CountKey() (string, string, string){
     	if MODE == "debug" {
     		fmt.Println("Post Update: ", err.Error())
     	}
-    	return "error", ""
+    	return "error", "",""
   	} 
 
   	dec := json.NewDecoder(response.Body)
@@ -450,7 +450,7 @@ func RandomTest() {
 		wg.Wait()
 		
 		err,size,mes := CountKey()
-		if err != "" || size != strconv.Itoa(len(localData) || mes != "pass") {
+		if err != "" || mes != "true" || size != strconv.Itoa(len(localData) ) {
 			Fail()
 		}
 		
@@ -458,6 +458,7 @@ func RandomTest() {
 		
 		for key,val := range dumped_data {
 			if err != "" || localData[key] != val {
+				fmt.Println(err)
 				Fail()
 			}
 		}
@@ -481,7 +482,7 @@ func RandomTest() {
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-func ThroughoutTest(){
+func ThroughputTest(){
 
 	time.Sleep(time.Second)
 	Shutdown(server_address)
@@ -520,7 +521,7 @@ func main() {
 	
 	//LianlianTest()	
 	//BasicTest()
-	//ThroughoutTest()
+	//ThroughputTest()
 	RandomTest()
 	return	
 }

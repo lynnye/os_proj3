@@ -280,7 +280,7 @@ func HandleCountKey(w http.ResponseWriter, request *http.Request) {
 	total_key := strconv.Itoa(len(DataBase.data))
 	PrintLog(MODE, "inquiring count key : " + total_key)
 	ret, _ := json.Marshal(map[string]string{
-		"result":total_key,
+		"result":total_key, "error":"true",
 	})
 	fmt.Fprintln(w, string(ret))
 	DataBase.RUnlock()
