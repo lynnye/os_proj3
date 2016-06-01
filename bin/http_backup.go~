@@ -249,7 +249,7 @@ func DecodeConfig() (string, string) {
 func InitialDump() {
 	response, err := http.Get("http://" + server_address + "/kvman/dump")
 	if err != nil {
-    	fmt.Println("Initial dump: ", err.Error())
+    	//fmt.Println("Initial dump: ", err.Error())
     	return
   	} 
 	defer response.Body.Close()

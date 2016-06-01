@@ -293,7 +293,7 @@ func HandleCountKey(w http.ResponseWriter, request *http.Request) {
 	total_key := strconv.Itoa(len(DataBase.data))
 	PrintLog(MODE, "inquiring count key : " + total_key)
 	ret, _ := json.Marshal(map[string]string{
-		"result":total_key, "error":"true",
+		"result":total_key, "mes":"true",
 	})
 	fmt.Fprintln(w, string(ret))
 	DataBase.Unlock()
@@ -336,7 +336,7 @@ func DecodeConfig() (string, string) {
 func InitialDump() {
 	response, err := http.Get("http://" + backup_address + "/kvman/dump")
 	if err != nil {
-    	fmt.Println("Initial dump: ", err.Error())
+    	//fmt.Println("Initial dump: ", err.Error())
     	return
   	} 
 	defer response.Body.Close()

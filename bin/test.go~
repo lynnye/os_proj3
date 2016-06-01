@@ -178,6 +178,7 @@ func Get(key string) (string,string,string){
 	return "", ret.Success,ret.Value
 }
 
+var checkCondition = 13
 func Update(key,value string) (string,string){
 	response, err := http.PostForm("http://" + server_address + "/kv/update", 
     	url.Values{"key": {key}, "value": {value}})
@@ -203,7 +204,6 @@ func Update(key,value string) (string,string){
 	return "",ret.Success
 }
 
-
 func CountKey() (string, string, string){
 	response, err := http.Get("http://" + server_address + "/kvman/countkey")
 	if err != nil {
@@ -216,7 +216,7 @@ func CountKey() (string, string, string){
   	dec := json.NewDecoder(response.Body)
   	type CountKey struct{
 		Result string
-		Error string
+		Mes string
 	}
 	var count CountKey
 	dec.Decode(&count)
@@ -225,7 +225,7 @@ func CountKey() (string, string, string){
 	}
 	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
-	return "",count.Result,count.Error
+	return "",count.Result,count.Mes
 }
 
 func Dump() (string, map[string]string){
@@ -299,8 +299,7 @@ func ConcurrentTest() {
 	}
 }
 
-var checkCondition = 3
-var N = 10
+var N = 100
 func LianlianTest() {
 	
 	Insert("1", "100")
@@ -524,7 +523,7 @@ func RandomTest() {
 	var wg sync.WaitGroup
 	localData = make(map[string]string)
 	
-	startTime := time.Now()	
+	//startTime := time.Now()	
 	for i := 1; i <= 5; i++ {
 		for j := 1; j <= M; j++ {
 			wg.Add(1)
@@ -534,10 +533,9 @@ func RandomTest() {
 		
 		err,size,mes := CountKey()
 		check := rand.Intn(N)
-		if err != "" || mes != "true" || size != strconv.Itoa(len(localData)){
-			if check < checkCondition {
+		
+		if (err != "" || mes != "true" || size != strconv.Itoa(len(localData))) && check < checkCondition{
 				Fail("countkey")
-			}
 		}
 		
 		err,dumped_data := Dump()
@@ -560,8 +558,8 @@ func RandomTest() {
 			StartServer("-p")
 		} 
 	}
-	endTime := time.Now()
-	fmt.Println(endTime.Sub(startTime))
+	//endTime := time.Now()
+	//fmt.Println(endTime.Sub(startTime))
 	time.Sleep(100 * time.Millisecond)
 	Shutdown(server_address)
 	Shutdown(backup_address)
@@ -576,7 +574,32 @@ func ThroughputTest(){
 	StartServer("-b")
 	StartServer("-p")
 	var wg sync.WaitGroup
-	startTime := time.Now()
+	//startTime := time.Now()
+	for i := 1; i <= 1000; i++ {
+		tmp := make([]rune, 30000)
+		for j := range(tmp) {
+			tmp[j] = letters[rand.Intn(len(letters))]
+		}
+		b := string(tmp)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 1; i <= 1; i++ {
+				k := rand.Intn(4)
+				if k == 0 {
+					Insert(b, b)
+				} else if k == 1 {
+					Update(b, b)
+				} else if k == 2 {
+					Get(b)
+				} else if k == 3 {
+					Delete(b)
+				}
+			}	
+		}()
+	}
+	wg.Wait()
+	
 	for i := 1; i <= 50; i++ {
 		tmp := make([]rune, 2000000)
 		for j := range(tmp) {
@@ -601,8 +624,8 @@ func ThroughputTest(){
 		}()
 	}
 	wg.Wait()
-	endTime := time.Now()
-	fmt.Println(endTime.Sub(startTime))
+	//endTime := time.Now()
+	//fmt.Println(endTime.Sub(startTime))
 	time.Sleep(time.Second)
 	Shutdown(server_address)
 	Shutdown(backup_address)
@@ -707,8 +730,8 @@ func main() {
 	//BasicTest()
 	ThroughputTest()
 	//TooManyFilesTest()
-	//RandomTest()
-	//EncodingTest()
+	RandomTest()
+	EncodingTest()
 	Success()
 	return	
 }
