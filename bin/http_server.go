@@ -22,7 +22,7 @@ var DataBase = struct{
 var dataLockLock sync.Mutex
 var dataLock map[string]*sync.Mutex = make(map[string]*sync.Mutex)
 
-const MODE = "test"
+const MODE = "debug"
 
 var server_address, backup_address string 
 

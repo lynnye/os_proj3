@@ -380,8 +380,8 @@ var globalLock sync.Mutex
 
 var dataLock map[string]*sync.Mutex = make(map[string]*sync.Mutex)
 var dataLockLock sync.Mutex
-func Fail(info string) {
-	fmt.Println("fail! " + info)
+func Fail() {
+	fmt.Println("fail!")
 	os.Exit(0)
 }
 
@@ -409,14 +409,14 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			elementLock.Lock()
 			err,mes := Insert(strconv.Itoa(k), strconv.Itoa(k))
 			if err != "" {
-				Fail("insert " + err + " " + mes)
+				Fail()
 			}
 			
 			globalLock.Lock()
 			_, ok := localData[strconv.Itoa(k)]
 			if ok == true && mes == "true" || ok == false && mes == "false" {
 				fmt.Println(k)
-				Fail("insert" + " " + mes)
+				Fail()
 			}
 			if ok == false {
 				localData[strconv.Itoa(k)] = strconv.Itoa(k)
@@ -445,7 +445,7 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			globalLock.Lock()
 			res,ok := localData[k]
 			if err != "" || ok == true && mes == "false" || ok == true && res != value || ok == false && mes == "true"{
-				Fail("delete")
+				Fail()
 			}
 			delete(localData, k)
 			
@@ -477,7 +477,7 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			_, ok := localData[k]
 			
 			if err != "" || mes == "false" && ok == true || ok == false && mes == "true"{
-				Fail("update")
+				Fail()
 			}
 			if ok == true {
 				localData[k] = val
@@ -504,7 +504,7 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			globalLock.Lock()
 			res, ok := localData[k]
 			if err != "" || mes == "false" && ok == true || mes == "true" && ok == false || ok == true && res != val {
-				Fail("get")
+				Fail()
 			}
 			globalLock.Unlock()
 			elementLock.Unlock()
@@ -535,7 +535,7 @@ func RandomTest() {
 		check := rand.Intn(N)
 		
 		if (err != "" || mes != "true" || size != strconv.Itoa(len(localData))) && check < checkCondition{
-				Fail("countkey")
+				Fail()
 		}
 		
 		err,dumped_data := Dump()
@@ -543,7 +543,7 @@ func RandomTest() {
 		for key,val := range dumped_data {
 			if err != "" || localData[key] != val {
 				fmt.Println(err)
-				Fail("dump")
+				Fail()
 			}
 		}
 		
@@ -574,9 +574,9 @@ func ThroughputTest(){
 	StartServer("-b")
 	StartServer("-p")
 	var wg sync.WaitGroup
-	//startTime := time.Now()
-	for i := 1; i <= 1000; i++ {
-		tmp := make([]rune, 30000)
+	startTime := time.Now()
+	for i := 1; i <= 10; i++ {
+		tmp := make([]rune, 100)
 		for j := range(tmp) {
 			tmp[j] = letters[rand.Intn(len(letters))]
 		}
@@ -585,7 +585,7 @@ func ThroughputTest(){
 		go func() {
 			defer wg.Done()
 			for i := 1; i <= 1; i++ {
-				k := rand.Intn(4)
+				k := 0
 				if k == 0 {
 					Insert(b, b)
 				} else if k == 1 {
@@ -600,7 +600,7 @@ func ThroughputTest(){
 	}
 	wg.Wait()
 	
-	for i := 1; i <= 50; i++ {
+	/*for i := 1; i <= 50; i++ {
 		tmp := make([]rune, 2000000)
 		for j := range(tmp) {
 			tmp[j] = letters[rand.Intn(len(letters))]
@@ -623,9 +623,9 @@ func ThroughputTest(){
 			}	
 		}()
 	}
-	wg.Wait()
-	//endTime := time.Now()
-	//fmt.Println(endTime.Sub(startTime))
+	wg.Wait()*/
+	endTime := time.Now()
+	fmt.Println(endTime.Sub(startTime))
 	time.Sleep(time.Second)
 	Shutdown(server_address)
 	Shutdown(backup_address)
@@ -648,7 +648,7 @@ func EncodingTest() {
     	io.Copy(ioutil.Discard, response.Body)
 	response.Body.Close()
     	if val != "11" {
-    		Fail("")
+    		Fail()
     	}
     	time.Sleep(time.Second)
 	Shutdown(server_address)
@@ -730,8 +730,8 @@ func main() {
 	//BasicTest()
 	ThroughputTest()
 	//TooManyFilesTest()
-	RandomTest()
-	EncodingTest()
+	//RandomTest()
+	//EncodingTest()
 	Success()
 	return	
 }
