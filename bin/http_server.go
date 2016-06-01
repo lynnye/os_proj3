@@ -15,9 +15,12 @@ import (
 )
 
 var DataBase = struct{
-    sync.RWMutex
+    sync.Mutex
     data map[string]string
 }{data: make(map[string]string)}
+
+var dataLockLock sync.Mutex
+var dataLock map[string]*sync.Mutex = make(map[string]*sync.Mutex)
 
 const MODE = "test"
 
@@ -34,6 +37,18 @@ func UnsuccessResponse(error_message string) string {
 		"success":"false","error":error_message,
 	})	
 	return string(json_encode)
+}
+
+func DataLockFind(key string) sync.Mutex {
+	dataLockLock.Lock()
+	defer dataLockLock.Unlock()
+	elementLock, ok := dataLock[key]
+	if ok == true {
+		return *elementLock 
+	} else {
+		dataLock[key] = new(sync.Mutex)
+		return *dataLock[key]
+	}
 }
 
 func Insert(key, value string) bool {
@@ -63,34 +78,37 @@ func HandleInsert(w http.ResponseWriter, request *http.Request) {
 		fmt.Fprintln(w, UnsuccessResponse("In insert, key or value input not correct"))
 		return
 	}
-
 	var key string = key_list[0]
 	var value string = value_list[0]
 
-	DataBase.Lock()
+	elementLock := DataLockFind(key)
+	elementLock.Lock()
 	{
 		response, err := http.PostForm("http://" + backup_address + "/kv/insert", 
     		url.Values{"key": {key}, "value": {value}})
 
   		if err != nil {
     		PrintLog(MODE, "Post Insert to Backup: " + err.Error())
-    		fmt.Fprintln(w, UnsuccessResponse("In insert, backup fails"))
-    		DataBase.Unlock()
-    		return
-  		}	
-  		io.Copy(ioutil.Discard, response.Body) 
-		response.Body.Close() 
-  		
+    		//fmt.Fprintln(w, UnsuccessResponse("In insert, backup fails"))
+    		//DataBase.Unlock()
+    		//return
+  		} else {
+  			io.Copy(ioutil.Discard, response.Body) 
+			response.Body.Close() 
+  		}
 
+		DataBase.Lock()
 		succ_insert := Insert(key, value)
 		if(!succ_insert){
-			fmt.Fprintln(w, UnsuccessResponse("In insert, key already exists"))
 			DataBase.Unlock()
+			elementLock.Unlock()
+			fmt.Fprintln(w, UnsuccessResponse("In insert, key already exists"))
 			return
 		}
+		DataBase.Unlock()
 	}
-	DataBase.Unlock()
-	
+	elementLock.Unlock()
+
 	json_encode, _ := json.Marshal(map[string]string{
 			"success":"true", 
 	})		
@@ -126,28 +144,32 @@ func HandleDelete(w http.ResponseWriter, request *http.Request) {
 
 	var key string = key_list[0]
 
-	DataBase.Lock()
+	elementLock := DataLockFind(key)
+	elementLock.Lock()
 	
 		response, err := http.PostForm("http://" + backup_address + "/kv/delete", 
     		url.Values{"key": {key}})
 
   		if err != nil {
     		PrintLog(MODE, "Post Delete to Backup: " + err.Error())
-    		fmt.Fprintln(w, UnsuccessResponse("In delete, backup fails"))
-    		DataBase.Unlock()
-    		return
-  		}	 
-  		io.Copy(ioutil.Discard, response.Body) 
-		response.Body.Close()
-
+    		//fmt.Fprintln(w, UnsuccessResponse("In delete, backup fails"))
+    		//DataBase.Unlock()
+    		//return
+  		} else {	 
+  			io.Copy(ioutil.Discard, response.Body) 
+			response.Body.Close()
+		}
+		DataBase.Lock()
 		succ_delete, delete_value := Delete(key)
 		if(!succ_delete){
-			fmt.Fprintln(w, UnsuccessResponse("In delete, key not exists"))
 			DataBase.Unlock()
+			elementLock.Unlock()
+			fmt.Fprintln(w, UnsuccessResponse("In delete, key not exists"))
 			return
-		}
-	
-	DataBase.Unlock()
+		}	
+		DataBase.Unlock()
+		
+	elementLock.Unlock()
 	
 	json_encode, _ := json.Marshal(map[string]string{
 		"success":"true", "value":delete_value,
@@ -181,27 +203,14 @@ func HandleGet(w http.ResponseWriter, request *http.Request) {
 
 	var key string = key_list[0]
 
-	DataBase.RLock()
-
-		response, err := http.Get("http://" + backup_address + "/kv/get?key=" + key)
-
-  		if err != nil {
-    		PrintLog(MODE, "Post Get to Backup: " + err.Error())
-    		fmt.Fprintln(w, UnsuccessResponse("In get, backup fails"))
-    		DataBase.RUnlock()
-    		return
-  		}	 
-  		io.Copy(ioutil.Discard, response.Body) 
-		response.Body.Close()
-
+	DataBase.Lock()
 		succ_get, get_value := Get(key)
 		if(!succ_get){
 			fmt.Fprintln(w, UnsuccessResponse("In get, key not exists"))
-			DataBase.RUnlock()
+			DataBase.Unlock()
 			return
 		}
-	
-	DataBase.RUnlock()
+	DataBase.Unlock()
 		
 	json_encode, _ := json.Marshal(map[string]string{
 		"success":"true", "value":get_value,
@@ -241,29 +250,33 @@ func HandleUpdate(w http.ResponseWriter, request *http.Request) {
 	var key string = key_list[0]
 	var value string = value_list[0]
 
-	DataBase.Lock()
+	elementLock := DataLockFind(key)
+	elementLock.Lock()
 	{
 		response, err := http.PostForm("http://" + backup_address + "/kv/update", 
     		url.Values{"key": {key}, "value": {value}})
 
   		if err != nil {
     		PrintLog(MODE, "Post Update to Backup: " + err.Error())
-    		fmt.Fprintln(w, UnsuccessResponse("In update, backup fails"))
-    		DataBase.Unlock()
-    		return
-  		}	 
-  		io.Copy(ioutil.Discard, response.Body) 
-		response.Body.Close()
-
+    		//fmt.Fprintln(w, UnsuccessResponse("In update, backup fails"))
+    		//DataBase.Unlock()
+    		//return
+  		} else {	 
+  			io.Copy(ioutil.Discard, response.Body) 
+			response.Body.Close()
+		}
+		DataBase.Lock()
 		succ_update := Update(key, value)
 		if(!succ_update){
-			fmt.Fprintln(w, UnsuccessResponse("In update, key not exists"))
 			DataBase.Unlock()
+			elementLock.Unlock()
+			fmt.Fprintln(w, UnsuccessResponse("In update, key not exists"))
 			return
 		}
-	}
-	DataBase.Unlock()	
-		
+		DataBase.Unlock()
+	}	
+	elementLock.Unlock()
+	
 	json_encode, _ := json.Marshal(map[string]string{
 		"success":"true", 
 	})		
@@ -276,23 +289,23 @@ func HandleDefault(w http.ResponseWriter, request *http.Request) {
 }
 
 func HandleCountKey(w http.ResponseWriter, request *http.Request) {
-	DataBase.RLock()
+	DataBase.Lock()
 	total_key := strconv.Itoa(len(DataBase.data))
 	PrintLog(MODE, "inquiring count key : " + total_key)
 	ret, _ := json.Marshal(map[string]string{
 		"result":total_key, "error":"true",
 	})
 	fmt.Fprintln(w, string(ret))
-	DataBase.RUnlock()
+	DataBase.Unlock()
 }
 
 func HandleDump(w http.ResponseWriter, request *http.Request) {
-	DataBase.RLock()
+	DataBase.Lock()
 	total_key := strconv.Itoa(len(DataBase.data))
 	PrintLog(MODE, "dumping database : " + total_key)
 	ret, _ := json.Marshal(DataBase.data)
 	fmt.Fprintln(w, string(ret))
-	DataBase.RUnlock()
+	DataBase.Unlock()
 }
 
 func HandleShutdown(w http.ResponseWriter, request *http.Request) {

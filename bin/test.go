@@ -21,7 +21,7 @@ var server_address = "http://127.0.0.1:1234"
 var backup_address = "http://127.0.0.2:1234"
 var stop_chan = make(chan int)
 
-const MODE = ""
+const MODE = "debug"
 
 func PrintLog(condition string, log_content string) {
 	if(condition == "debug") {
@@ -379,31 +379,54 @@ func BasicTest() {
 var localData map[string]string
 var globalLock sync.Mutex
 
+var dataLock map[string]*sync.Mutex = make(map[string]*sync.Mutex)
+var dataLockLock sync.Mutex
 func Fail(info string) {
 	fmt.Println("fail! " + info)
 	os.Exit(0)
 }
+
+func DataLockFind(key string) *sync.Mutex {
+	dataLockLock.Lock()
+	defer dataLockLock.Unlock()
+	elementLock, ok := dataLock[key]
+	if ok == true {
+		fmt.Print
+		return elementLock 
+	} else {
+		dataLock[key] = new(sync.Mutex)
+		return dataLock[key]
+	}
+}
+
 func RandomTestFunction(wg *sync.WaitGroup) {
 	
 	defer wg.Done()
-	for i := 1; i <= 5; i++ {
+	for i := 1; i <= 10; i++ {
 		x := rand.Intn(1)
 	
 		if x == 0 {//insert
 			k := rand.Intn(100)
-			globalLock.Lock()
+			elementLock := *DataLockFind(strconv.Itoa(k)) 
+			elementLock.Lock()
+			fmt.Println(k, *dataLock[strconv.Itoa(k)], elementLock)
 			err,mes := Insert(strconv.Itoa(k), strconv.Itoa(k))
 			if err != "" {
-				Fail("insert")
+				Fail("insert " + err + " " + mes)
 			}
+			
+			globalLock.Lock()
 			_, ok := localData[strconv.Itoa(k)]
 			if ok == true && mes == "true" || ok == false && mes == "false" {
-				Fail("insert")
+				fmt.Println(k)
+				Fail("insert" + " " + mes)
 			}
 			if ok == false {
 				localData[strconv.Itoa(k)] = strconv.Itoa(k)
 			}
 			globalLock.Unlock()
+			
+			elementLock.Unlock()
 		} else if x == 1 {//delete
 			
 			globalLock.Lock()
@@ -415,12 +438,17 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			for k = range(localData) {
 				break
 			}
+			elementLock := *DataLockFind(k) 
+			elementLock.Lock()
+			delete(localData, k)
+			globalLock.Unlock()
+			
 			err,mes,value := Delete(k)
 			if err != ""  || mes == "false" || value != localData[k] {
 				Fail("delete")
 			}
-			delete(localData, k)
-			globalLock.Unlock()
+			elementLock.Unlock()
+			
 		} else if x == 2 {//update
 			
 			
@@ -435,12 +463,16 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			for k = range(localData) {
 				break
 			}
-			err, mes := Update(k, val)
+			elementLock := *DataLockFind(k) 
+			elementLock.Lock()
 			localData[k] = val
+			globalLock.Unlock()
+			err, mes := Update(k, val)
+			
 			if err != "" || mes == "false" {
 				Fail("update")
 			}
-			globalLock.Unlock()
+			elementLock.Unlock()
 		} else if x == 3 {//get
 			
 			globalLock.Lock()
@@ -453,11 +485,15 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 			for k = range(localData) {
 				break
 			}
+			elementLock := *DataLockFind(k) 
+			elementLock.Lock()
+			globalLock.Unlock()
 			err, mes, val := Get(k)
 			if err != "" || mes == "false" || val != localData[k] {
 				Fail("get")
 			}
-			globalLock.Unlock()
+			elementLock.Unlock()
+
 		}
 	}
 }
@@ -468,10 +504,10 @@ func RandomTest() {
 	StartServer("-b")
 	StartServer("-p")
 
-	var M = 5
+	var M = 20
 	var wg sync.WaitGroup
 	localData = make(map[string]string)	
-	for i := 1; i <= M; i++ {
+	for i := 1; i <= 1; i++ {
 		for j := 1; j <= M; j++ {
 			wg.Add(1)
 			go RandomTestFunction(&wg)
@@ -524,7 +560,7 @@ func ThroughputTest(){
 	var wg sync.WaitGroup
 	startTime := time.Now()
 	for i := 1; i <= 1000; i++ {
-		tmp := make([]rune, 10000)
+		tmp := make([]rune, 1000)
 		for j := range(tmp) {
 			tmp[j] = letters[rand.Intn(len(letters))]
 		}
@@ -532,15 +568,17 @@ func ThroughputTest(){
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			k := rand.Intn(4)
-			if k == 0 {
-				Insert(b, b)
-			} else if k == 1 {
-				Update(b, b)
-			} else if k == 2 {
-				Get(b)
-			} else if k == 3 {
-				Delete(b)
+			for i := 1; i <= 10; i++ {
+				k := rand.Intn(4)
+				if k == 0 {
+					Insert(b, b)
+				} else if k == 1 {
+					Update(b, b)
+				} else if k == 2 {
+					Get(b)
+				} else if k == 3 {
+					Delete(b)
+				}
 			}	
 		}()
 	}
@@ -581,6 +619,14 @@ func Success() {
 	fmt.Println("Success!")
 	fmt.Printf("Number of Insertions Succeeded/Total Number of Insertions %d/%d\n", 
 	numberInsertSuccess, numberInsert)
+	if numberGet == 0 {
+		numberGet ++
+		getTime = append(getTime, 0)
+	}
+	if numberInsert == 0 {
+		numberInsert ++
+		insertTime = append(insertTime, 0)
+	}
 	fmt.Printf("Average Insert Time/Average Get Time %f/%f\n", 
 	insertTotTime / float64(numberInsert), getTotTime / float64(numberGet))
 	sort.Float64s(insertTime)
@@ -612,7 +658,7 @@ func TooManyFilesTest() {
 		//wg.Add(1)
 		//go func() {
 		//	defer wg.Done()
-			key, value := "的的", "11" 
+			key, value := "111", "11" 
 			http.PostForm("http://" + server_address + "/kv/insert",
 		  	url.Values{"key": {key}, "value": {value}})
 		//}()
@@ -642,9 +688,9 @@ func main() {
 	//LianlianTest()	
 	//BasicTest()
 	//ThroughputTest()
-	TooManyFilesTest()
-	//RandomTest()
+	//TooManyFilesTest()
+	RandomTest()
 	//EncodingTest()
-	//Success()
+	Success()
 	return	
 }
