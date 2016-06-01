@@ -39,15 +39,15 @@ func UnsuccessResponse(error_message string) string {
 	return string(json_encode)
 }
 
-func DataLockFind(key string) sync.Mutex {
+func DataLockFind(key string) *sync.Mutex {
 	dataLockLock.Lock()
 	defer dataLockLock.Unlock()
 	elementLock, ok := dataLock[key]
 	if ok == true {
-		return *elementLock 
+		return elementLock 
 	} else {
 		dataLock[key] = new(sync.Mutex)
-		return *dataLock[key]
+		return dataLock[key]
 	}
 }
 
@@ -206,8 +206,8 @@ func HandleGet(w http.ResponseWriter, request *http.Request) {
 	DataBase.Lock()
 		succ_get, get_value := Get(key)
 		if(!succ_get){
-			fmt.Fprintln(w, UnsuccessResponse("In get, key not exists"))
 			DataBase.Unlock()
+			fmt.Fprintln(w, UnsuccessResponse("In get, key not exists"))
 			return
 		}
 	DataBase.Unlock()
