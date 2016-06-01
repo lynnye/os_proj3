@@ -14,6 +14,7 @@ import (
 	"io"
 	"sync"
 	"math/rand"
+	"sort"
 )
 
 var server_address = "http://127.0.0.1:1234"
@@ -51,9 +52,23 @@ type BackupResponse struct{
 	Success string
 }
 
+var numberInsert, numberInsertSuccess, numberGet int
+var insertTotTime, getTotTime float64
+var insertTime, getTime []float64
+ 
 func Insert(key,value string) (string, string){
+
+	numberInsert ++
+	
+	startTime := time.Now()
 	response, err := http.PostForm("http://" + server_address + "/kv/insert", 
     	url.Values{"key": {key}, "value": {value}})
+    	endTime := time.Now()
+    	duration := endTime.Sub(startTime).Seconds()
+ 	
+ 	insertTotTime += duration
+	insertTime = append(insertTime, duration)
+
   	if err != nil {
   	if MODE == "debug" {
     		fmt.Println("Post Insert: ", err.Error())
@@ -73,7 +88,10 @@ func Insert(key,value string) (string, string){
     	}
 	
 	io.Copy(ioutil.Discard, response.Body)
-	//response.Body.Close()
+	response.Body.Close()
+	if ret.Success == "true" {
+		numberInsertSuccess ++
+	}
 	return "", ret.Success	
 }
 
@@ -127,7 +145,16 @@ func Delete(key string) (string, string, string){
 }
 
 func Get(key string) (string,string,string){
+	numberGet ++
+	
+	startTime := time.Now()
 	response, err := http.Get("http://" + server_address + "/kv/get?key=" + key)
+	endTime := time.Now()
+    	duration := endTime.Sub(startTime).Seconds()
+ 	
+ 	getTotTime += duration
+	getTime = append(getTime, duration)
+	
   	if err != nil {
   	if MODE == "debug" {
   	  	fmt.Println("Post Get: ", err.Error())
@@ -363,7 +390,7 @@ func RandomTestFunction(wg *sync.WaitGroup) {
 		x := rand.Intn(1)
 	
 		if x == 0 {//insert
-			k := rand.Intn(10)
+			k := rand.Intn(100)
 			globalLock.Lock()
 			err,mes := Insert(strconv.Itoa(k), strconv.Itoa(k))
 			if err != "" {
@@ -505,7 +532,7 @@ func ThroughputTest(){
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			k := rand.Intn(1)
+			k := rand.Intn(4)
 			if k == 0 {
 				Insert(b, b)
 			} else if k == 1 {
@@ -525,6 +552,53 @@ func ThroughputTest(){
 	Shutdown(backup_address)
 }
  
+ 
+func EncodingTest() {
+
+	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
+	StartServer("-b")
+	StartServer("-p")
+	
+	key, value := "的的", "11" 
+	
+	response,_ := http.PostForm("http://" + server_address + "/kv/insert",
+  	url.Values{"key": {key}, "value": {value}})
+    	_, _, val := Get("的的")
+    	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
+    	if val != "11" {
+    		Fail("")
+    	}
+    	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
+}
+ 
+ 
+func Success() {
+	fmt.Println("Success!")
+	fmt.Printf("Number of Insertions Succeeded/Total Number of Insertions %d/%d\n", 
+	numberInsertSuccess, numberInsert)
+	fmt.Printf("Average Insert Time/Average Get Time %f/%f\n", 
+	insertTotTime / float64(numberInsert), getTotTime / float64(numberGet))
+	sort.Float64s(insertTime)
+	sort.Float64s(getTime)
+	
+	fmt.Printf("20th insertTime/20th getTime: %f/%f\n", 
+	insertTime[int(0.2*float64(len(insertTime)))], getTime[int(0.2*float64(len(getTime)))])
+	
+	fmt.Printf("50th insertTime/50th getTime: %f/%f\n", 
+	insertTime[int(0.5*float64(len(insertTime)))], getTime[int(0.5*float64(len(getTime)))])
+	
+	fmt.Printf("70th insertTime/70th getTime: %f/%f\n", 
+	insertTime[int(0.7*float64(len(insertTime)))], getTime[int(0.7*float64(len(getTime)))])
+	
+	fmt.Printf("90th insertTime/90th getTime: %f/%f\n", 
+	insertTime[int(0.9*float64(len(insertTime)))], getTime[int(0.9*float64(len(getTime)))])
+	
+} 
 func main() {
 	server_address, backup_address = DecodeConfig()
 	rand.Seed(time.Now().UnixNano())  
@@ -532,5 +606,7 @@ func main() {
 	//BasicTest()
 	ThroughputTest()
 	//RandomTest()
+	//EncodingTest()
+	Success()
 	return	
 }
