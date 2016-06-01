@@ -599,14 +599,52 @@ func Success() {
 	insertTime[int(0.9*float64(len(insertTime)))], getTime[int(0.9*float64(len(getTime)))])
 	
 } 
+
+func TooManyFilesTest() {
+
+	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
+	StartServer("-b")
+	StartServer("-p")
+	var wg sync.WaitGroup
+	for i := 1; i <= 1016; i++ {
+		//wg.Add(1)
+		//go func() {
+		//	defer wg.Done()
+			key, value := "的的", "11" 
+			http.PostForm("http://" + server_address + "/kv/insert",
+		  	url.Values{"key": {key}, "value": {value}})
+		//}()
+		  
+	}  	
+	
+	for i := 1; i <= 1000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			
+			Insert("1", "1")
+		}()
+		  
+	}  	
+	wg.Wait()
+	
+
+	time.Sleep(time.Second)
+	Shutdown(server_address)
+	Shutdown(backup_address)
+}
+
 func main() {
 	server_address, backup_address = DecodeConfig()
 	rand.Seed(time.Now().UnixNano())  
 	//LianlianTest()	
 	//BasicTest()
-	ThroughputTest()
+	//ThroughputTest()
+	TooManyFilesTest()
 	//RandomTest()
 	//EncodingTest()
-	Success()
+	//Success()
 	return	
 }
