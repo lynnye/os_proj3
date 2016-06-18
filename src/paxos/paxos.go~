@@ -1,4 +1,4 @@
-package main
+package paxos
 
 import (
 	"net"
@@ -15,17 +15,17 @@ import (
 	"math/rand"
 )
 
-const totalServer = 14
+var totalServer int
 
 type PaxosInstance struct {
 
 	lock sync.Mutex
 	PrepareN int
 	ProposeN int
-	ProposeV ProposeValue
+	ProposeV interface{}
 	decided bool
 	proposed bool
-	decidedValue ProposeValue
+	decidedValue interface{}
 }
 
 type Paxos struct{
@@ -50,13 +50,13 @@ type PrepareMessage struct{
 type PrepareACK struct{
 	Mes string
 	ProposeN int
-	ProposeV ProposeValue
+	ProposeV interface{}
 }
 
 type ProposeMessage struct{
 	Seq int
 	ProposeN int
-	ProposeV ProposeValue
+	ProposeV interface{}
 }
 
 type ProposeACK struct{
@@ -64,13 +64,9 @@ type ProposeACK struct{
 	ProposeN int
 }
 
-type ProposeValue struct{
-	V int
-}
-
 type DecidedMessage struct{
 	Seq int
-	V ProposeValue
+	V interface{}
 }
 
 func max(a, b int) int {
@@ -87,12 +83,25 @@ func min(a, b int) int {
 	return b 
 }
 
+func (px *Paxos) Max() int{
+	return px.maximumSeq
+}
+
+func (px *Paxos) Min() int {
+	return px.minimumSeq
+}
+
+
 func (px *Paxos) PrepareHandler(args *PrepareMessage, reply *PrepareACK) error {
+	
 	px.lock.Lock()
 	defer px.lock.Unlock()
 	if args.Seq > px.maximumSeq {
-		reply.Mes = "ignore"
-		return nil
+		tmp := args.Seq - px.maximumSeq
+		for i:= 1; i<=tmp; i++ {
+			px.instance = append(px.instance, new(PaxosInstance))
+		}
+		px.maximumSeq = args.Seq
 	}
 	
 	//fmt.Println("prepare", px.me, px.peers[px.me])
@@ -116,8 +125,11 @@ func (px *Paxos) ProposeHandler(args *ProposeMessage, reply *ProposeACK) error {
 	px.lock.Lock()
 	defer px.lock.Unlock()
 	if args.Seq > px.maximumSeq {
-		reply.Mes = "ignore"
-		return nil
+		tmp := args.Seq - px.maximumSeq
+		for i:= 1; i<=tmp; i++ {
+			px.instance = append(px.instance, new(PaxosInstance))
+		}
+		px.maximumSeq = args.Seq
 	}
 	
 	//fmt.Println("propose", px.me, px.peers[px.me])
@@ -149,9 +161,11 @@ func (px *Paxos) DecidedHandler(args *DecidedMessage, reply *string) error {
 	
 	//fmt.Println("decide", px.me, px.peers[px.me])
 	if args.Seq > px.maximumSeq {
-		str := "exceed"
-		reply = &str
-		return nil
+		tmp := args.Seq - px.maximumSeq
+		for i:= 1; i<=tmp; i++ {
+			px.instance = append(px.instance, new(PaxosInstance))
+		}
+		px.maximumSeq = args.Seq
 	}
 	p := px.instance[args.Seq]
 	
@@ -165,7 +179,7 @@ func (px *Paxos) DecidedHandler(args *DecidedMessage, reply *string) error {
 	return nil
 }
 
-func (px *Paxos) Propose(seq int, value ProposeValue, p *PaxosInstance) {
+func (px *Paxos) Propose(seq int, value interface{}, p *PaxosInstance) {
 	
 	currentMaxN := 0
 	
@@ -187,7 +201,7 @@ func (px *Paxos) Propose(seq int, value ProposeValue, p *PaxosInstance) {
 		
 		chooseN := (currentMaxN / totalServer + 1) * totalServer + px.me
 		mes := &PrepareMessage{seq, chooseN}
-		var prepareReply [totalServer]*PrepareACK
+		var prepareReply []*PrepareACK = make([]*PrepareACK, totalServer, totalServer)
 		for i := 0; i < totalServer; i++ {
 			prepareReply[i] = new(PrepareACK)
 		}
@@ -206,7 +220,7 @@ func (px *Paxos) Propose(seq int, value ProposeValue, p *PaxosInstance) {
 		wg.Wait()
 		cnt := 0
 		tmpMaxN := 0
-		var tmpValue ProposeValue
+		var tmpValue interface{}
 		for _, reply := range(prepareReply){
 			if reply.Mes == "ignore" || reply.Mes == "" {
 				cnt ++
@@ -234,7 +248,7 @@ func (px *Paxos) Propose(seq int, value ProposeValue, p *PaxosInstance) {
 			tmpValue = value
 		}
 		
-		var proposeReply [totalServer]*ProposeACK
+		var proposeReply []*ProposeACK = make([]*ProposeACK, totalServer, totalServer)
 		for i := 0; i < totalServer; i++ {
 			proposeReply[i] = new(ProposeACK)
 		}
@@ -284,7 +298,7 @@ func (px *Paxos) Propose(seq int, value ProposeValue, p *PaxosInstance) {
 	} 
 }
 
-func (px *Paxos) Start(seq int, value ProposeValue){
+func (px *Paxos) Start(seq int, value interface{}){
 	px.lock.Lock()
 	
 	if seq > px.maximumSeq {
@@ -308,12 +322,11 @@ func (px *Paxos) Start(seq int, value ProposeValue){
 	
 }
 
-func (px *Paxos) Status(seq int) (decided bool, v ProposeValue){
+func (px *Paxos) Status(seq int) (decided bool, v interface{}){
 	px.lock.Lock()
 	defer px.lock.Unlock()
-	var v1 ProposeValue
 	if seq > px.maximumSeq {
-		return false, v1 
+		return false, nil 
 	}
 	p := px.instance[seq]
 	p.lock.Lock()
@@ -358,6 +371,8 @@ func Make(peers []string, me int) *Paxos {
 	px.peers = peers
 	px.maximumSeq = -1
 	px.instance = make([]*PaxosInstance, 0, 0)
+	
+	totalServer = len(peers)
 	px.hasAgreed = make([]int, len(peers))
 	for i, _ := range(px.hasAgreed) {
 		px.hasAgreed[i] = -1
@@ -431,19 +446,20 @@ func main() {
 	"127.0.0.10:1238","127.0.0.11:1238","127.0.0.12:1238","127.0.0.13:1238","127.0.0.14:1238"}
 	var px [25]*Paxos
 	T := 1
+	totalServer = len(s)
 	for i:= totalServer-1; i >= 0; i-- {
 		px[i] = Make(s, i)
 	}
 	
 	for i:= T-1; i >= 0; i-- {
-		for j:= 0; j < totalServer; j++ {
-			go px[j].Start(i, ProposeValue{i*totalServer+j})
+		for j:= 0; j < 2; j++ {
+			go px[j].Start(i, i*totalServer+j)
 		}
 	}
-	px[3].Kill()
-	px[7].Kill()
-	px[13].Kill()
-	px[12].Kill()
+//	px[3].Kill()
+//	px[7].Kill()
+//	px[13].Kill()
+//	px[12].Kill()
 	time.Sleep(2*time.Second)
 	for true {
 		for i:= 0; i < T; i++ {

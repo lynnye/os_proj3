@@ -23,11 +23,12 @@ var dataLockLock sync.Mutex
 var dataLock map[string]*sync.Mutex = make(map[string]*sync.Mutex)
 
 const MODE = "debug"
+const MODE1 = "debug1"
 
 var server_address, backup_address string 
 
 func PrintLog(condition string, log_content string) {
-	if(condition == "debug") {
+	if(condition == "debug1") {
 		fmt.Println("In primary server: " + log_content)
 	}
 }
@@ -360,8 +361,8 @@ func main() {
 	go http.HandleFunc("/kvman/dump", HandleDump)
 	go http.HandleFunc("/kvman/shutdown", HandleShutdown)
 	server_address, backup_address = DecodeConfig()
-	PrintLog(MODE, "server address: " + server_address)
-	PrintLog(MODE, "backup address: " + backup_address)
+	PrintLog(MODE1, "server address: " + server_address)
+	PrintLog(MODE1, "backup address: " + backup_address)
 	InitialDump()
 	err := http.ListenAndServe(server_address, nil)
 	if err != nil {

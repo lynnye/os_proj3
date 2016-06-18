@@ -1,0 +1,20 @@
+#!/usr/bin/python
+
+import os
+import sys
+import json
+import urllib2
+
+if __name__ == "__main__":
+	#settings = json.loads(open("../conf/settings.conf").read())
+	#server_address = "http://" + settings["primary"] + ":" + settings["port"]
+	#bctkup_address = "http://" + settings["backup"] + ":" + settings["port"]
+	#print server_address, backup_address
+
+		#urllib2.urlopen(server_address + "/kvman/shutdown")
+		os.system("killall server")
+		quit()
+
+
+
+

@@ -14,16 +14,17 @@ import (
 	"paxos"
 	"strconv"
 	"time"
+	"encoding/gob"
 )
 
 type ProposeValue struct{
-	seq int
-	mes string
-	id string
-	me int
-	key string
-	value string
-	succ bool
+	Seq int
+	Mes string
+	Id string
+	Me int
+	Key string
+	Value string
+	Succ bool
 }
 
 var DataBase = struct{
@@ -38,7 +39,7 @@ var me int
 var meStr string
 var px *paxos.Paxos
 
-var seq int
+var seq int = -1
 var seqLock sync.Mutex
 
 var queue []chan ProposeValue
@@ -82,29 +83,31 @@ func getNextOperation(seq int) ProposeValue {
 func HandleDecidedOperation(){
 	nextSeq := 0
 	for {
+		//PrintLog("debug", "handleDecidedOperation")
 		v := getNextOperation(nextSeq)
 			
-		_, ok := idData[v.id]
+		//PrintLog("debug", v.Mes+" "+v.Key+" "+v.Value)
+		_, ok := idData[v.Id]
 		
-		if (v.id == "-1" || !ok) {  
+		if (v.Id == "-1" || !ok) {  
 		
-			switch (v.mes) {
+			switch (v.Mes) {
 			case "insert":
-				v.succ = Insert(v.key, v.value)
+				v.Succ = Insert(v.Key, v.Value)
 			case "delete":
-				v.succ, v.value = Delete(v.key)
+				v.Succ, v.Value = Delete(v.Key)
 			case "get":
-				v.succ, v.value = Get(v.key)
+				v.Succ, v.Value = Get(v.Key)
 			case "update":
-				v.succ = Update(v.key, v.value)
+				v.Succ = Update(v.Key, v.Value)
 			}
 			
-			idData[v.id] = v.succ
-			idDataValue[v.id] = v.value
+			idData[v.Id] = v.Succ
+			idDataValue[v.Id] = v.Value
 			
 		} else {
-			v.succ = idData[v.id]
-			v.value = idDataValue[v.id]
+			v.Succ = idData[v.Id]
+			v.Value = idDataValue[v.Id]
 		}
 		queueAdd(nextSeq, v)
 		nextSeq ++
@@ -138,24 +141,24 @@ func queueDelete(seq int) (v ProposeValue) {
 
 func WaitDecided(mes string, id string, me int, key string, value string) (bool, string){
 	var v ProposeValue
-	v.mes = mes
-	v.id = id
-	v.me = me
-	v.key = key
-	v.value = value
+	v.Mes = mes
+	v.Id = id
+	v.Me = me
+	v.Key = key
+	v.Value = value
 	
 	for {
 		seqLock.Lock()
 		seq++
 		seq1 := seq
 		seqLock.Unlock()
-		v.seq = seq1
+		v.Seq = seq1
 		px.Start(seq1, v)
 
 		v1 := queueDelete(seq1)
 		
-		if (v.me == v1.me && v.seq == v1.seq) {
-			return v1.succ, v1.value
+		if (v.Me == v1.Me && v.Seq == v1.Seq) {
+			return v1.Succ, v1.Value
 		}
 	}
 }
@@ -185,6 +188,9 @@ func Insert(key, value string) bool {
 
 
 func HandleInsert(w http.ResponseWriter, request *http.Request) {
+	
+	//PrintLog("debug", "before insert")
+	
 	if(request.ParseForm() != nil) {
 		fmt.Fprintln(w, UnsuccessResponse("In HandleInsert, fail to parse URL"))
 		PrintLog(MODE, "In HandleInsert, fail to parse URL")
@@ -419,9 +425,9 @@ func DecodeConfig() (serverPeers, paxosPeers []string) {
 		fmt.Println("Parse config file error")
 		log.Fatal("Parse config file(Json): ", err.Error())
 	}
-	for v := range(config) {
+	/*for v := range(config) {
 		PrintLog("debug", v)
-	}
+	}*/
 	M := len(config) - 1
 	serverPeers = make([]string, M, M)
 	paxosPeers = make([]string, M, M)
@@ -452,7 +458,9 @@ func main() {
 	go http.HandleFunc("/kvman/shutdown", HandleShutdown)
 	go http.HandleFunc("/kvman/restart", HandleRestart)
 	
-	me, err := strconv.Atoi(os.Args[1])
+	gob.Register(ProposeValue{})
+
+	me, err := strconv.Atoi(os.Args[0])
 	me = me - 1
 	meStr = strconv.Itoa(me)
 	
@@ -464,11 +472,15 @@ func main() {
 	}
 	
 	px = paxos.Make(paxosPeers, me)
+
+	go HandleDecidedOperation()
 	
 	err = http.ListenAndServe(serverPeers[me], nil)
+	
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err.Error())
 	}
+
 	
 	os.Exit(0) //why need os.Exit?
 }
