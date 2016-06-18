@@ -31,7 +31,7 @@ var insertTime, getTime []float64
  
 func Insert(key,value,server_address string) (string, string){
 
-	PrintLog("debug", "inesrt " + key + " " + value + " " + server_address)
+	PrintLog("debug", "insert " + key + " " + value + " " + server_address)
 	numberInsert ++
 	
 	startTime := time.Now()
@@ -317,9 +317,11 @@ func main() {
 	peers := DecodeConfig()
 
 	Insert("1", "1", peers[0])
-	//Insert("2", "2", peers[1])
-	//Insert("3", "3", peers[2])
+	Insert("11", "11", peers[0])
+	Insert("2", "2", peers[1])
+	Insert("3", "3", peers[2])
 	
+	time.Sleep(1000*time.Millisecond)
 	Dump(peers[1])	
 	
 	KillAll()

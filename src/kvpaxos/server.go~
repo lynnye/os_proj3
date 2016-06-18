@@ -70,9 +70,12 @@ func getNextOperation(seq int) ProposeValue {
 	to := 10 * time.Millisecond
 	for {
 		decided, v := px.Status(seq)
+		
 		if decided {
 			return v.(ProposeValue) 
 		}
+		PrintLog("debug", "wait for decided")
+		
 		time.Sleep(to)
 		if to < 10 * time.Second {
 			to *= 2
@@ -83,10 +86,10 @@ func getNextOperation(seq int) ProposeValue {
 func HandleDecidedOperation(){
 	nextSeq := 0
 	for {
-		//PrintLog("debug", "handleDecidedOperation")
+		PrintLog("debug", "handleDecidedOperation")
 		v := getNextOperation(nextSeq)
 			
-		//PrintLog("debug", v.Mes+" "+v.Key+" "+v.Value)
+		PrintLog("debug", v.Mes+" "+v.Key+" "+v.Value)
 		_, ok := idData[v.Id]
 		
 		if (v.Id == "-1" || !ok) {  
@@ -115,15 +118,19 @@ func HandleDecidedOperation(){
 }
 
 func queueAdd(seq int, v ProposeValue) {
+
+	//PrintLog("debug", "queue add started")
 	queueLock.Lock()
-	
+	//PrintLog("debug", "queue add get lock")
 	if len(queue) <= seq {
-		queue = append(queue, make(chan ProposeValue))
+		queue = append(queue, make(chan ProposeValue, 1))
 	}
 	
 	queueLock.Unlock()
-	
+	//PrintLog("debug", "queue add release lock")
 	queue[seq] <- v
+	
+	//PrintLog("debug", "queue add finished")
 }
 
 func queueDelete(seq int) (v ProposeValue) {
@@ -148,6 +155,7 @@ func WaitDecided(mes string, id string, me int, key string, value string) (bool,
 	v.Value = value
 	
 	for {
+		PrintLog("debug", "start try paxos instance")
 		seqLock.Lock()
 		seq++
 		seq1 := seq
@@ -156,10 +164,12 @@ func WaitDecided(mes string, id string, me int, key string, value string) (bool,
 		px.Start(seq1, v)
 
 		v1 := queueDelete(seq1)
-		
+		PrintLog("debug", "try paxos instance, get a decided value")
+		fmt.Println(v.Me, v1.Me, v.Seq, v1.Seq)
 		if (v.Me == v1.Me && v.Seq == v1.Seq) {
 			return v1.Succ, v1.Value
 		}
+		
 	}
 }
 
@@ -460,7 +470,8 @@ func main() {
 	
 	gob.Register(ProposeValue{})
 
-	me, err := strconv.Atoi(os.Args[0])
+	var err error
+	me, err = strconv.Atoi(os.Args[0])
 	me = me - 1
 	meStr = strconv.Itoa(me)
 	
