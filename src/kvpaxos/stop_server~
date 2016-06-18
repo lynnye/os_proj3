@@ -11,9 +11,10 @@ if __name__ == "__main__":
 	#bctkup_address = "http://" + settings["backup"] + ":" + settings["port"]
 	#print server_address, backup_address
 
-		#urllib2.urlopen(server_address + "/kvman/shutdown")
-		os.system("killall server")
+	if len(sys.argv) == 2 and sys.argv[1] == '-p' :
+		urllib2.urlopen(server_address + "/kvman/shutdown")
 		quit()
+	print "Please specify the argument: <node id>"
 
 
 

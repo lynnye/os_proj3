@@ -86,10 +86,10 @@ func getNextOperation(seq int) ProposeValue {
 func HandleDecidedOperation(){
 	nextSeq := 0
 	for {
-		PrintLog("debug", "handleDecidedOperation")
+		//PrintLog("debug", "handleDecidedOperation")
 		v := getNextOperation(nextSeq)
 			
-		PrintLog("debug", v.Mes+" "+v.Key+" "+v.Value)
+		//PrintLog("debug", v.Mes+" "+v.Key+" "+v.Value)
 		_, ok := idData[v.Id]
 		
 		if (v.Id == "-1" || !ok) {  
@@ -155,7 +155,7 @@ func WaitDecided(mes string, id string, me int, key string, value string) (bool,
 	v.Value = value
 	
 	for {
-		PrintLog("debug", "start try paxos instance")
+		//PrintLog("debug", "start try paxos instance")
 		seqLock.Lock()
 		seq++
 		seq1 := seq
@@ -164,7 +164,7 @@ func WaitDecided(mes string, id string, me int, key string, value string) (bool,
 		px.Start(seq1, v)
 
 		v1 := queueDelete(seq1)
-		PrintLog("debug", "try paxos instance, get a decided value")
+		//PrintLog("debug", "try paxos instance, get a decided value")
 		fmt.Println(v.Me, v1.Me, v.Seq, v1.Seq)
 		if (v.Me == v1.Me && v.Seq == v1.Seq) {
 			return v1.Succ, v1.Value

@@ -255,15 +255,16 @@ func StartServer(argument string) string{
 	return ""
 }
 
-func StopServer(argument string) string{
-	cmd := exec.Command("./stop_server", argument)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+func StopServer(address string) string{
+	response, err := http.Get("http://" + address + "/kvman/shutdown")
 	if err != nil {
-		PrintLog(MODE, err.Error())
-		return "error"
-	}
+    	if MODE == "debug" {
+    		fmt.Println("Post Shutdown: ", err.Error())
+    	}
+    	return "error"
+  	} 
+  	io.Copy(ioutil.Discard, response.Body) 
+	response.Body.Close()
 	return ""
 }
 
@@ -320,9 +321,12 @@ func main() {
 	Insert("11", "11", peers[0])
 	Insert("2", "2", peers[1])
 	Insert("3", "3", peers[2])
-	
-//	time.Sleep(10000*time.Millisecond)
-	Dump(peers[1])	
+	Delete("2", peers[2])
+	Update("11", "111", peers[1])
+	Get("3", peers[0])
+	Dump(peers[2])	
+	Dump(peers[1])
+	Dump(peers[0])
 	
 	KillAll()
 	
