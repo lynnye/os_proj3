@@ -74,7 +74,7 @@ func getNextOperation(seq int) ProposeValue {
 		if decided {
 			return v.(ProposeValue) 
 		}
-		PrintLog("debug", "wait for decided")
+		//PrintLog("debug", "wait for decided")
 		
 		time.Sleep(to)
 		if to < 10 * time.Second {

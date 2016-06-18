@@ -74,7 +74,7 @@ func getNextOperation(seq int) ProposeValue {
 		if decided {
 			return v.(ProposeValue) 
 		}
-		PrintLog("debug", "wait for decided")
+		//PrintLog("debug", "wait for decided")
 		
 		time.Sleep(to)
 		if to < 10 * time.Second {
@@ -165,7 +165,7 @@ func WaitDecided(mes string, id string, me int, key string, value string) (bool,
 
 		v1 := queueDelete(seq1)
 		//PrintLog("debug", "try paxos instance, get a decided value")
-		fmt.Println(v.Me, v1.Me, v.Seq, v1.Seq)
+		//fmt.Println(v.Me, v1.Me, v.Seq, v1.Seq)
 		if (v.Me == v1.Me && v.Seq == v1.Seq) {
 			return v1.Succ, v1.Value
 		}

@@ -31,7 +31,7 @@ var insertTime, getTime []float64
  
 func Insert(key,value,server_address string) (string, string){
 
-	PrintLog("debug", "insert " + key + " " + value + " " + server_address)
+	//PrintLog("debug", "insert " + key + " " + value + " " + server_address)
 	numberInsert ++
 	
 	startTime := time.Now()
@@ -243,7 +243,7 @@ func Shutdown(address string) string{
 
 func StartServer(argument string) string{
 	
-	PrintLog("debug", "test")
+	//PrintLog("debug", "test")
 	cmd := exec.Command("./start_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -293,9 +293,9 @@ func DecodeConfig() (serverPeers []string) {
 		fmt.Println("Parse config file error")
 		log.Fatal("Parse config file(Json): ", err.Error())
 	}
-	for v := range(config) {
+	/*for v := range(config) {
 		PrintLog("debug", v)
-	}
+	}*/
 	M := len(config) - 1
 	serverPeers = make([]string, M, M)
 	
