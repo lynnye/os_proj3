@@ -157,7 +157,7 @@ func WaitDecided(mes string, id string, me int, key string, value string) (bool,
 	for {
 		//PrintLog("debug", "start try paxos instance")
 		seqLock.Lock()
-		seq++
+	 	seq++
 		seq1 := seq
 		seqLock.Unlock()
 		v.Seq = seq1
@@ -407,7 +407,20 @@ func HandleDump(w http.ResponseWriter, request *http.Request) {
 	
 	total_key := strconv.Itoa(len(DataBase.data))
 	PrintLog(MODE, "dumping database : " + total_key)
-	ret, _ := json.Marshal(DataBase.data)
+	
+	var tmp [][]string = make([][]string, len(DataBase.data))
+	
+	idx := 0
+	
+	for i,v := range(DataBase.data) {
+		tmp[idx] = make([]string, 2)
+		tmp[idx][0] = i
+		tmp[idx][1] = v		
+		idx ++
+	}
+	
+	ret, _ := json.Marshal(tmp)
+	//fmt.Println(string(ret))
 	fmt.Fprintln(w, string(ret))
 }
 
@@ -469,7 +482,7 @@ func main() {
 	go http.HandleFunc("/kvman/restart", HandleRestart)
 	
 	gob.Register(ProposeValue{})
-
+	
 	var err error
 	me, err = strconv.Atoi(os.Args[0])
 	me = me - 1

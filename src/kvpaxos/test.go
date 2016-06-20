@@ -14,10 +14,12 @@ import (
 	"io"
 	//"sync"
 	"math/rand"
-	//"sort"
+	"sort"
 )
 
 const MODE = "debug"
+
+var servers []string
 
 func PrintLog(condition string, log_content string) {
 	if(condition == "debug") {
@@ -307,6 +309,102 @@ func DecodeConfig() (serverPeers []string) {
 	return serverPeers
 }
 
+func Equal(a,b map[string]string) bool {
+	if(len(a) != len(b)) {
+		fmt.Println("Map with different size:", len(a), len(b))
+		return false
+	}
+	for key, value := range(a) {
+		value2, ok := b[key]
+		if(!ok) {
+			fmt.Println("key " + key + " not exists")
+			return false
+		}
+		if(value2 != value) {
+			fmt.Println("value not equal:" + value + " " + value2)
+			return false
+		}
+	}
+	return true
+}
+
+func BasicTest() {
+	Insert("1", "1", servers[0])
+	Insert("11", "11", servers[0])
+	Insert("2", "2", servers[1])
+	Insert("3", "3", servers[2])
+	Delete("2", servers[2])
+	Update("11", "111", servers[1])
+	Get("3", servers[0])
+	for i := 1; i <= 100; i++ {
+		operation_type := rand.Intn(5)
+		server_id := rand.Intn(3)
+		if operation_type == 0 {//insert
+			key := strconv.Itoa(rand.Intn(100))
+			value := strconv.Itoa(rand.Intn(100))
+			Insert(key, value, servers[server_id])
+		}
+		if operation_type == 1 {//delete
+			key := strconv.Itoa(rand.Intn(100))
+			Delete(key, servers[server_id])
+		}
+		if operation_type == 2 {//update
+			key := strconv.Itoa(rand.Intn(100))
+			value := strconv.Itoa(rand.Intn(100))
+			Update(key, value, servers[server_id])
+		}
+		if operation_type == 3 {//get
+			key := strconv.Itoa(rand.Intn(100))
+			Get(key, servers[server_id])
+		}
+		if operation_type == 4 {//dump
+			_, data_0 := Dump(servers[0])	
+			_, data_1 := Dump(servers[1])
+			_, data_2 := Dump(servers[2])
+			if(!Equal(data_0, data_1) || !Equal(data_1,data_2)) {
+				TestFail("BasicTest")
+			}
+		}
+	}
+
+
+}
+
+func TestFail(place string) {
+	fmt.Println("Failed in " + place + "!")
+	os.Exit(0)
+}
+
+func  TestSucceed() {
+	fmt.Println("Succeed!")
+	fmt.Printf("Number of Insertions Succeeded/Total Number of Insertions %d/%d\n", 
+	numberInsertSuccess, numberInsert)
+	if numberGet == 0 {
+		numberGet ++
+		getTime = append(getTime, 0)
+	}
+	if numberInsert == 0 {
+		numberInsert ++
+		insertTime = append(insertTime, 0)
+	}
+	fmt.Printf("Average Insert Time/Average Get Time %f/%f\n", 
+	insertTotTime / float64(numberInsert), getTotTime / float64(numberGet))
+	sort.Float64s(insertTime)
+	sort.Float64s(getTime)
+	
+	fmt.Printf("20th insertTime/20th getTime: %f/%f\n", 
+	insertTime[int(0.2*float64(len(insertTime)))], getTime[int(0.2*float64(len(getTime)))])
+	
+	fmt.Printf("50th insertTime/50th getTime: %f/%f\n", 
+	insertTime[int(0.5*float64(len(insertTime)))], getTime[int(0.5*float64(len(getTime)))])
+	
+	fmt.Printf("70th insertTime/70th getTime: %f/%f\n", 
+	insertTime[int(0.7*float64(len(insertTime)))], getTime[int(0.7*float64(len(getTime)))])
+	
+	fmt.Printf("90th insertTime/90th getTime: %f/%f\n", 
+	insertTime[int(0.9*float64(len(insertTime)))], getTime[int(0.9*float64(len(getTime)))])
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())  
 	
@@ -314,22 +412,12 @@ func main() {
 	StartServer("2")
 	StartServer("3")
 	
-	
-	peers := DecodeConfig()
+	servers = DecodeConfig()
+	fmt.Println(servers)
 
-	Insert("1", "1", peers[0])
-	Insert("11", "11", peers[0])
-	Insert("2", "2", peers[1])
-	Insert("3", "3", peers[2])
-	Delete("2", peers[2])
-	Update("11", "111", peers[1])
-	Get("3", peers[0])
-	Dump(peers[2])	
-	Dump(peers[1])
-	Dump(peers[0])
-	
+	BasicTest()	
 	KillAll()
+	TestSucceed()
 	
-//	Success()
 	return	
 }
