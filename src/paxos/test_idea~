@@ -1,5 +1,0 @@
-1. propose same seq
-2. 多个client一起运行，发送同一个operationid
-3. done()测试
-
-4. Test for Get(), if there is no paxos agreement for Get(), what will happen?

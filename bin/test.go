@@ -271,7 +271,8 @@ func StartServer(argument string) string{
 	cmd := exec.Command("./start_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err := cmd.Start()
+	time.Sleep(100*time.Millisecond)
 	if err != nil {
 		PrintLog(MODE, err.Error())
 		return "error"
@@ -283,7 +284,8 @@ func StopServer(argument string) string{
 	cmd := exec.Command("./stop_server", argument)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err := cmd.Start()
+	time.Sleep(100*time.Millisecond)
 	if err != nil {
 		PrintLog(MODE, err.Error())
 		return "error"
@@ -363,6 +365,8 @@ func BasicTest() {
 	for i := 1; i <= 10; i++ {
 		go Get(strconv.Itoa(i))
 	}
+	
+	Dump()
 	
 	time.Sleep(time.Second)
 	StopServer("-b")
@@ -574,7 +578,7 @@ func ThroughputTest(){
 	StartServer("-b")
 	StartServer("-p")
 	var wg sync.WaitGroup
-	startTime := time.Now()
+	//startTime := time.Now()
 	for i := 1; i <= 10; i++ {
 		tmp := make([]rune, 100)
 		for j := range(tmp) {
@@ -624,8 +628,8 @@ func ThroughputTest(){
 		}()
 	}
 	wg.Wait()*/
-	endTime := time.Now()
-	fmt.Println(endTime.Sub(startTime))
+	//endTime := time.Now()
+	//fmt.Println(endTime.Sub(startTime))
 	time.Sleep(time.Second)
 	Shutdown(server_address)
 	Shutdown(backup_address)
@@ -727,11 +731,11 @@ func main() {
 	server_address, backup_address = DecodeConfig()
 	rand.Seed(time.Now().UnixNano())  
 	//LianlianTest()	
-	//BasicTest()
+	BasicTest()
 	ThroughputTest()
 	//TooManyFilesTest()
-	//RandomTest()
-	//EncodingTest()
+	RandomTest()
+	EncodingTest()
 	Success()
 	return	
 }
