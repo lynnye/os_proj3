@@ -20,7 +20,7 @@ def start_server(server_name, server_address):
 	sys.exit(0)
 
 if __name__ == "__main__":
-	settings = json.loads(open("../conf/settings.conf").read())
+	settings = json.loads(open("conf/settings.conf").read())
 	server_address = "http://" + settings["primary"] + ":" + settings["port"]
 	backup_address = "http://" + settings["backup"] + ":" + settings["port"]
 

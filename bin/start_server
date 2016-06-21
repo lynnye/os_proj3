@@ -20,14 +20,14 @@ def start_server(server_name, server_address):
 	sys.exit(0)
 
 if __name__ == "__main__":
-	settings = json.loads(open("../conf/settings.conf").read())
+	settings = json.loads(open("conf/settings.conf").read())
 	server_address = "http://" + settings["primary"] + ":" + settings["port"]
 	backup_address = "http://" + settings["backup"] + ":" + settings["port"]
 
 	if len(sys.argv) == 2 and sys.argv[1] == '-p' :
-		start_server("http_server", server_address)
+		start_server("bin/http_server", server_address)
 	if len(sys.argv) == 2 and sys.argv[1] == '-b' :
-		start_server("http_backup", backup_address)
+		start_server("bin/http_backup", backup_address)
 
 	print "Please specify the argument: -p or -b?"
 

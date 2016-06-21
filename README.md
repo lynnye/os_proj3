@@ -7,9 +7,15 @@ This project uses language golang 1.6.2 and python 2.7.6, please install complie
 
 Test under following instructions:
 1. ./compile.sh
-2. go to the **bin** directory, run command: ./test 
+2. run command: ./test 
 
 Source files and executable files are put in the **bin** directory, the ip configure is put in the **conf** directory.
+test file is put in the root directory
+
+under root directory
+test.go:	   the source code of test
+test:		   the executable file of test
+
 
 under directory **bin**
 http_back.go:      the source code to implement a backup server
@@ -18,8 +24,6 @@ http_server.go:    the source code to implement a primary server
 http_server:       the executable file of primary server
 start_server:      the script to active server, with argument '-p' to start primary server, argument '-b' to start backup server
 stop_server:       the script to shutdown server, with argument '-p' to stop primary server, argument '-b' to stop backup server
-test.go:	   the source code of test
-test:		   the executable file of test
 http_client.go     just for test
 
 under directory **conf**

@@ -22,13 +22,13 @@ var DataBase = struct{
 var dataLockLock sync.Mutex
 var dataLock map[string]*sync.Mutex = make(map[string]*sync.Mutex)
 
-const MODE = "debug"
+const MODE = "test"
 const MODE1 = "debug1"
 
 var server_address, backup_address string 
 
 func PrintLog(condition string, log_content string) {
-	if(condition == "debug1") {
+	if(condition == "debug") {
 		fmt.Println("In primary server: " + log_content)
 	}
 }
@@ -304,7 +304,20 @@ func HandleDump(w http.ResponseWriter, request *http.Request) {
 	DataBase.Lock()
 	total_key := strconv.Itoa(len(DataBase.data))
 	PrintLog(MODE, "dumping database : " + total_key)
-	ret, _ := json.Marshal(DataBase.data)
+	
+	var tmp [][]string = make([][]string, len(DataBase.data))
+	
+	idx := 0
+	
+	for i,v := range(DataBase.data) {
+		tmp[idx] = make([]string, 2)
+		tmp[idx][0] = i
+		tmp[idx][1] = v		
+		idx ++
+	}
+	
+	ret, _ := json.Marshal(tmp)
+	//fmt.Println(string(ret))
 	fmt.Fprintln(w, string(ret))
 	DataBase.Unlock()
 }
@@ -316,7 +329,7 @@ func HandleShutdown(w http.ResponseWriter, request *http.Request) {
 }
 
 func DecodeConfig() (string, string) {
-	config_file, err := ioutil.ReadFile("../conf/settings.conf")
+	config_file, err := ioutil.ReadFile("conf/settings.conf")
 	if err != nil{
 		fmt.Println("Load config file error")
 		log.Fatal("Load config gile: ", err.Error())
